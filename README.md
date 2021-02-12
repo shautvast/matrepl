@@ -1,6 +1,7 @@
 **MatRepl**
 * is a Matrix
 * and a repl: Read–Eval–Print Loop, where Print is doing operations on vectors and matrices in a graphic environment
+* written in vanilla javascript
 
 <img src="screenshot-0.png" with="250"></img>
   
