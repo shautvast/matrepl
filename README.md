@@ -2,7 +2,7 @@
 * is a Matrix
 * and a repl: Read–Eval–Print Loop, where Print is doing operations on vectors and matrices in a graphic environment
 
-<img src="screenshot-1.png"></img>
+<img src="screenshot-1.png" with="250"></img>
   
 The repl has the following syntax (It's work in progress, new capabilities will be added)
 * arithmetic expressions:
