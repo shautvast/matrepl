@@ -3,7 +3,7 @@
 * and a repl: Read–Eval–Print Loop, where Print is doing operations on vectors and matrices in a graphic environment
 * written in vanilla javascript (ES6)
 
-<img src="screenshot-0.png" with="250"></img>
+<img src="screenshot.png" with="250"></img>
   
 The repl has the following syntax (It's work in progress, new capabilities will be added)
 * arithmetic expressions:

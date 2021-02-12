@@ -5,7 +5,6 @@
         const state = {};
         const command_input_element = document.getElementById('command_input');
         const command_history_element = document.getElementById('command_history');
-        const bottom = document.getElementById('bottom');
         command_input_element.value = '';
         let command_history = [];
         let command_history_index = 0;
@@ -150,7 +149,7 @@
             vector: (args) => add_vector({x0: args[0], y0: args[1], x: args[2], y: args[3]}),
             remove: (args) => {
                 if (args[0].hasOwnProperty('binding')) {
-                    delete this.state[args[0].binding];
+                    delete state[args[0].binding];
                     return remove_vector(args[0].object); // by binding value
                 } else {
                     return remove_vector(args[0]); // by index (@...)
