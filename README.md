@@ -15,9 +15,10 @@ The repl has the following syntax (It's work in progress, new capabilities will 
 * remove(@x) removes an object using it's assigned index 
 * method calls:
   * a = vector(0,0,12,1)
+  > &gt; vector@0{x0:1, y0: 2, x:12, y:1}
   * a.type()
-  * > &gt; vector
+  > &gt; vector
 * property lookup
-  * a.x
-  * > 12
+  * a.x+1
+  > &gt; 13
   
