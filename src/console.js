@@ -6,10 +6,21 @@
         const command_input_element = document.getElementById('command_input');
         const command_history_element = document.getElementById('command_history');
         command_input_element.value = '';
-        let command_history = [];
+        let command_history = [''];
         let command_history_index = 0;
 
+        let adjust_input_element_height = function(){
+            let num_lines=command_input_element.value.split(/\n/).length;
+            command_input_element.setAttribute('style', 'height: ' + num_lines + 'em');
+            if (num_lines>1){
+                command_input_element.setAttribute('class','multiline');
+            } else {
+                command_input_element.setAttribute('class','single_line');
+            }
+        }
+
         command_input_element.onkeyup = function handle_key_input(event) {
+            adjust_input_element_height();
             if (event.key === 'ArrowUp') {
                 if (command_history_index > -1) {
                     command_input_element.value = command_history[command_history_index];
@@ -27,24 +38,32 @@
                 }
             }
             if (event.key === 'Enter') {
-                let command = command_input_element.value;
-                command_history_element.innerText += command + "\n";
-                command_input_element.value = '';
-                command_history_index = command_history.length;
-                let tokens = scan(command);
-                let statement = parse(tokens);
-                let result;
-                try {
-                    result = visit_expression(statement);
-                    if (result.description) {
-                        result = result.description;
+                let commands = command_input_element.value;
+                command_input_element.value='';
+                adjust_input_element_height();
+                let command_array = commands.split(/\n/);
+                for (let i = 0; i < command_array.length; i++) {
+                    let command = command_array[i];
+                    if (command.length > 0) {
+                        command_history_element.innerText += command + "\n";
+                        command_input_element.value = '';
+                        command_history_index = command_history.length;
+                        let tokens = scan(command);
+                        let statement = parse(tokens);
+                        let result;
+                        try {
+                            result = visit_expression(statement);
+                            if (result.description) {
+                                result = result.description;
+                            }
+                        } catch (e) {
+                            result = e.message;
+                        }
+                        command_history_element.innerText += result + "\n";
+                        command_history.push(command);
+                        command_history_element.scrollTo(0, command_history_element.scrollHeight);
                     }
-                } catch (e) {
-                    result = e.message;
                 }
-                command_history_element.innerText += result + "\n";
-                command_history.push(command);
-                command_history_element.scrollTo(0, command_history_element.scrollHeight);
             }
         };
 
@@ -134,7 +153,7 @@
                     return object_wrapper.object[method_or_property.name].apply(object_wrapper, method_or_property.arguments);
 
                 } else { // property
-                    if (!object_wrapper.object.hasOwnProperty(method_or_property.name)){
+                    if (!object_wrapper.object.hasOwnProperty(method_or_property.name)) {
                         throw {message: `property ${method_or_property.name} not found on ${object_wrapper.type}`};
                     }
                     return object_wrapper.object[method_or_property.name];

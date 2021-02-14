@@ -61,12 +61,25 @@ svg {
     bottom: 0;
 }
 
-#command_input{
+.multiline{
+    border-top: 1px slategray solid;
+    border-left: 1px slategray solid;
+    border-right: 1px slategray solid;
+    border-bottom: none transparent;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.single_line{
     border: none transparent;
-    background: black;
+}
+
+#command_input{
+    background: #111;
     color: greenyellow;
     outline: none;
     width: 39vw;
+    height: 1em;
 }
 
 #command_history{
