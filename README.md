@@ -21,6 +21,12 @@ The repl has the following syntax (It's work in progress, new capabilities will 
 * property lookup
   * a.x+1
   > &gt; 13
+* drag vectors using the mouse pointer. You can change the vector arrows visually
+* lazy evaluation. The difference between ```c = a+b``` and ```c = "a+b"``` 
+  is that the latter assigns to c a parsed expression that can always be evaluated later. 
+  When you apply lazy evaluation and later update ```a```, the value for c will be reevaluated
+  automatically. (NB automatic reevaluation is not yet implemented). Combined with vector dragging, 
+  you can get an intuition for vector addition.
   
 
 **To run locally**
@@ -30,7 +36,7 @@ The repl has the following syntax (It's work in progress, new capabilities will 
   ```
   a=vector(0,0,0.5,0.5)
   b=vector(0,0,-1,1)
-  c="a+b"
+  c=a+b
   ```
 * and press enter
 * or type help()
