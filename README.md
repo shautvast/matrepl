@@ -22,3 +22,15 @@ The repl has the following syntax (It's work in progress, new capabilities will 
   * a.x+1
   > &gt; 13
   
+
+**To run locally**
+* make sure you have node/npm
+* cmdline: npm run start
+* enter the following:
+  ```
+  a=vector(0,0,0.5,0.5)
+  b=vector(0,0,-1,1)
+  c="a+b"
+  ```
+* and press enter
+* or type help()
