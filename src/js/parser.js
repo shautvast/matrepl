@@ -1,4 +1,7 @@
-const parse = function (tokens) {
+import {token_types} from './scanner';
+import {scan} from './scanner';
+
+export const parse = function (tokens) {
     let token_index = 0;
 
     return statement();
@@ -79,7 +82,7 @@ const parse = function (tokens) {
     function call() {
         let expr = primary();
 
-        while (true) {
+        for (;;){
             if (match([token_types.LEFT_PAREN])) {
                 expr = finish_call(expr.name);
             } else {
@@ -91,23 +94,27 @@ const parse = function (tokens) {
     }
 
     function finish_call(callee) {
-        let arguments = [];
+        let arguments_list = [];
         if (!check(token_types.RIGHT_PAREN, token_index)) {
             do {
-                arguments.push(expression());
+                arguments_list.push(expression());
             } while (match([token_types.COMMA]));
         }
         if (!match([token_types.RIGHT_PAREN])) {
             throw {message: "Expect ')' after arguments."};
         }
 
-        return {type: 'call', name: callee, arguments: arguments};
+        return {type: 'call', name: callee, arguments: arguments_list};
     }
 
 
     function primary() {
         if (match([token_types.NUMERIC, token_types.STRING])) {
             return {type: 'literal', value: previous_token().value, value_type: previous_token().type};
+        } else if (match([token_types.LAZY])) {
+            let tokens = scan(previous_token().expression);
+            let expression = parse(tokens);
+            return {type: 'lazy', value: expression};
         } else if (match([token_types.LEFT_PAREN])) {
             let expr = expression();
             if (expr && match([token_types.RIGHT_PAREN])) {

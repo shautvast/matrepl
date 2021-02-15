@@ -2,9 +2,9 @@
  * Creates an array of tokens from a line of input.
  *
  * @param command: string
- * @returns {token_type[]}
+ * @returns {token_types[]}
  */
-const scan = function(command) {
+export const scan = function (command) {
     let current_index = 0, // current index of char to look at in the command string
         word_start_index = 0, // marker for start of a literal or identifier
         tokens = [];
@@ -66,9 +66,9 @@ const scan = function(command) {
                     return token_types.EQUALS;
                 }
             case '\'':
-                return string('\'');
-            case '\"':
-                return string('\"');
+                return string();
+            case '"':
+                return lazy_expression();
         }
         if (is_digit(next_char)) {
             let token = Object.assign({}, token_types.NUMERIC);
@@ -141,11 +141,11 @@ const scan = function(command) {
         return command.substring(word_start_index, current_index);
     }
 
-    function string(quote) { // as of yet strings may not unclude escaped quotes that are also the start/end quote
-        while (current_char() !== quote && !is_at_end()) {
+    function string() { // as of yet strings may not unclude escaped quotes that are also the start/end quote
+        while (current_char() !== '\'' && !is_at_end()) {
             advance();
         }
-        if (is_at_end() && current_char() !== quote) {
+        if (is_at_end() && current_char() !== '\'') {
             throw {message: 'unterminated string'}
         } else {
             let string_token = Object.assign({}, token_types.STRING);
@@ -154,9 +154,23 @@ const scan = function(command) {
             return string_token;
         }
     }
+
+    function lazy_expression() {
+        while (current_char() !== '"' && !is_at_end()) {
+            advance();
+        }
+        if (is_at_end() && current_char() !== '"') {
+            throw {message: 'unterminated string'}
+        } else {
+            let lazy_token = Object.assign({}, token_types.LAZY);
+            lazy_token.expression = command.substring(word_start_index + 1, current_index);
+            advance();
+            return lazy_token;
+        }
+    }
 };
 
-const token_types = {
+export const token_types = {
     LEFT_PAREN: {type: 'left_paren'},
     RIGHT_PAREN: {type: 'right_paren'},
     LEFT_BRACKET: {type: 'left_bracket'},
@@ -177,5 +191,6 @@ const token_types = {
     LESS_OR_EQUAL: {type: 'less_or_equal'},
     NUMERIC: {type: 'number', value: undefined},
     IDENTIFIER: {type: 'identifier', value: undefined},
-    STRING: {type: 'string', value: undefined}
+    STRING: {type: 'string', value: undefined},
+    LAZY: {type: 'lazy', expression: undefined, parsed_expression:undefined}
 };
