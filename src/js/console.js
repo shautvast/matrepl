@@ -1,6 +1,6 @@
 import {scan, token_types} from './scanner';
 import {parse} from './parser';
-import {remove_vector, update_vector_arrow, add_vector_to_group} from "./index";
+import {add_vector_to_group, remove_vector, update_vector_arrow, vectors} from "./index";
 
 /**
  * handles user input from the console div
@@ -9,15 +9,12 @@ const state = {};
 const command_input_element = document.getElementById('command_input');
 const command_history_element = document.getElementById('command_history');
 command_input_element.value = '';
-let current_object_index = 0;
 let command_history = [''];
 let command_history_index = 0;
 
 export const update_lazy_objects = function () {
     let lazy_objects = Object.values(state).filter(e => Object.prototype.hasOwnProperty.apply(e, ['lazy_expression']));
-    for (let index = 0; index < lazy_objects.length; index++) {
-        let object = lazy_objects[index];
-
+    lazy_objects.forEach(object => {
         let value = visit_expression(object.lazy_expression);
         let existing_value = state[object.binding];
         if (existing_value) {
@@ -32,7 +29,7 @@ export const update_lazy_objects = function () {
             description = state[object.binding];
         }
         return {description: object.binding + ':' + description};
-    }
+    });
 }
 
 export const adjust_input_element_height = function () {
@@ -82,9 +79,10 @@ command_input_element.onkeyup = function handle_key_input(event) {
                     let object_wrapper = result.value;
 
                     if (object_wrapper.object.is_vector) {
-                        if (object_wrapper.previous){
+                        if (object_wrapper.previous) {
                             update_vector_arrow(object_wrapper.previous.id, object_wrapper.object);
                         } else {
+                            vectors.push(result.value.object);
                             add_vector_to_group(result.value.object);
                         }
                     }
@@ -108,7 +106,7 @@ export let visit_expression = function (expr) {
         case 'declaration': {
             let value = visit_expression(expr.initializer);
             value.binding = expr.var_name.value;
-            if (value.binding in state){
+            if (value.binding in state) {
                 value.previous = state[value.binding].object;
             }
             state[value.binding] = value;
@@ -245,7 +243,7 @@ const addition = function (left, right) {
 }
 
 export const create_vector = function (vector) { //rename to create_vector
-    vector.id = current_object_index++;
+    vector.id = vectors.length;
     vector.add = (other) => create_vector({
         x0: vector.x0 + other.x0,
         y0: vector.x0 + other.x0,

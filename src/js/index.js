@@ -8,7 +8,7 @@ import {update_lazy_objects} from "./console";
 const SVG_NS = 'http://www.w3.org/2000/svg'; // program needs these to create svg elements
 let grid_size = 100; // this is the nr of pixels for the basis vector (1,0) (0,1)
 let half_grid_size = grid_size >> 1; // used to position the grid lines
-let vectors = []; // collection of added vectors // maybe move to console.js
+export let vectors = []; // collection of added vectors // maybe move to console.js
 let moving_vector; // user can move vector arrows. when moving, this refers to the arrow
 let width = window.innerWidth, height = window.innerHeight;
 let origin_x = Math.floor((width / grid_size) / 2) * grid_size + half_grid_size,
@@ -185,7 +185,7 @@ const move_vector = function (event) {
  * }
  */
 const draw_vectors = function () {
-    const vector_group = create_vector_group();
+    const vector_group = get_or_create_vector_group();
 
     for (let i = 0; i < vectors.length; i++) {
         add_vector_to_group(vectors[i]);
@@ -194,13 +194,7 @@ const draw_vectors = function () {
 }
 
 export const add_vector_to_group = function (vector) {
-    vectors.push(vector);
-    vector.is_visible = true;
-    let vector_group = document.getElementById('vectors');
-
-    if (vector_group === null || vector_group === undefined) {
-        vector_group = create_vector_group();
-    }
+    let vector_group = get_or_create_vector_group();
     let vector_arrow = arrow(vector.id, vector.x0, vector.y0, vector.x, vector.y, 'vector');
     vector_arrow.onmousedown = function start_moving_vector(event) {
         moving_vector = event.target;
@@ -209,10 +203,14 @@ export const add_vector_to_group = function (vector) {
     vector_group.appendChild(vector_arrow);
 }
 
-const create_vector_group = function () {
-    const vector_group = create("g");
-    vector_group.id = 'vectors';
-    svg.appendChild(vector_group);
+const get_or_create_vector_group = function () {
+    let vector_group = document.getElementById('vectors');
+    if (vector_group === null || vector_group === undefined) {
+        vector_group = create("g");
+        svg.appendChild(vector_group);
+        vector_group.id = 'vectors';
+    }
+
     return vector_group;
 }
 
@@ -296,4 +294,4 @@ const svg = create_svg();
 document.body.appendChild(svg);
 svg.appendChild(create_grid('grid', 'bg-grid'));
 svg.appendChild(create_axes());
-create_vector_group();
+get_or_create_vector_group();
