@@ -37,5 +37,5 @@ The repl has the following syntax (It's work in progress, new capabilities will 
   b=vector(0,0,-1,1)
   c="a+b" 
   ```
-* and press enter. Then using the mouse pointer move a or b. (Labels will be added).
+* and press enter. Then using the mouse pointer move a or b. 
 * or type help()
