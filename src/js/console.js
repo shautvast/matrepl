@@ -1,6 +1,6 @@
 import {scan, token_types} from './scanner';
 import {parse} from './parser';
-import {add_vector, remove_vector} from "./index";
+import {add_vector, remove_vector, update_vector_arrow} from "./index";
 
 /**
  * handles user input from the console div
@@ -11,6 +11,25 @@ const command_history_element = document.getElementById('command_history');
 command_input_element.value = '';
 let command_history = [''];
 let command_history_index = 0;
+
+export const update_lazy_objects = function () {
+    let lazy_objects = Object.values(state).filter(e => Object.prototype.hasOwnProperty.apply(e, ['lazy_expression']));
+    for (let index = 0; index < lazy_objects.length; index++) {
+        let object = lazy_objects[index];
+
+        let value = visit_expression(object.lazy_expression);
+        let existing_value = state[object.binding];
+        if (existing_value) {
+            update_vector_arrow(existing_value.object.id, value.object);
+        }
+        state[object.binding].object = value.object;
+        let description = state[object.binding].description;
+        if (!description) {
+            description = state[object.binding];
+        }
+        return {description: object.binding + ':' + description};
+    }
+}
 
 export const adjust_input_element_height = function () {
     let num_lines = command_input_element.value.split(/\n/).length;
@@ -70,10 +89,11 @@ command_input_element.onkeyup = function handle_key_input(event) {
     }
 };
 
-let visit_expression = function (expr) {
+export let visit_expression = function (expr) {
     switch (expr.type) {
         case 'declaration': {
             let value = visit_expression(expr.initializer);
+            console.log(value);
             let existing_value = state[expr.var_name.value];
             if (existing_value) {
                 if (existing_value.type === 'vector') {
@@ -127,19 +147,21 @@ let visit_expression = function (expr) {
         case 'literal':
             return expr.value;
         case 'call':
-            return call(expr.name, expr.arguments);
-        case 'lazy':
-            console.log(expr.value);
-            return visit_expression(expr.value);
+            return function_call(expr.name, expr.arguments);
+        case 'lazy': {
+            let r = visit_expression(expr.value);
+            r.lazy_expression = expr.value;
+            return r;
+        }
     }
 }
 
-const call = function (function_name, argument_exprs) {
+const function_call = function (function_name, argument_exprs) {
     let arguments_list = [];
     for (let i = 0; i < argument_exprs.length; i++) {
         arguments_list.push(visit_expression(argument_exprs[i]));
     }
-    if (functions[function_name]) {
+    if (Object.prototype.hasOwnProperty.apply(functions, [function_name])) {
         return functions[function_name](arguments_list);
     } else {
         let arg_list = '';
@@ -162,7 +184,7 @@ const method_call = function (object_wrapper, method_or_property) {
             return object_wrapper.object[method_or_property.name].apply(object_wrapper, method_or_property.arguments);
 
         } else { // property
-            if (!Object.prototype.hasOwnProperty.call(object_wrapper.object, method_or_property.name)) {
+            if (!Object.prototype.hasOwnProperty.call(object_wrapper.object, [method_or_property.name])) {
                 throw {message: `property ${method_or_property.name} not found on ${object_wrapper.type}`};
             }
             return object_wrapper.object[method_or_property.name];
@@ -176,7 +198,7 @@ const functions = {
     help: () => help(),
     vector: (args) => add_vector({x0: args[0], y0: args[1], x: args[2], y: args[3]}),
     remove: (args) => {
-        if (Object.prototype.hasOwnProperty.call(args[0],'binding')){
+        if (Object.prototype.hasOwnProperty.call(args[0], ['binding'])) {
             delete state[args[0].binding];
             return remove_vector(args[0].object); // by binding value
         } else {

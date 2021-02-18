@@ -1,8 +1,6 @@
-import './console.js';
 import './scanner.js';
 import './parser.js';
-
-export let add_vector, remove_vector;
+import {update_lazy_objects} from "./console";
 
 /**
  * Main entry. draws the matrix
@@ -25,7 +23,7 @@ const create = function (element_type) {
 }
 
 /**
- * creates the d attribute string
+ * calculate the screen coordinates for grid values
  * @param x0 start_x
  * @param y0 start_y
  * @param x1 end_x
@@ -33,7 +31,19 @@ const create = function (element_type) {
  * @returns {string} to put in an SVG path
  */
 const calculate_d = function (x0, y0, x1, y1) {
-    return "M" + x0 + " " + y0 + " L" + x1 + " " + y1;
+    return create_d(origin_x + x0 * grid_size, origin_y - y0 * grid_size,
+        +origin_x + x1 * grid_size, origin_y - y1 * grid_size);
+}
+/**
+ * create a d attribute from screen coordinates
+ * @param s_x0
+ * @param s_y0
+ * @param s_x1
+ * @param s_y1
+ * @returns {string}
+ */
+const create_d = function (s_x0, s_y0, s_x1, s_y1) {
+    return "M" + s_x0 + " " + s_y0 + " L" + s_x1 + " " + s_y1;
 }
 
 /**
@@ -47,7 +57,7 @@ const calculate_d = function (x0, y0, x1, y1) {
  */
 const create_line = function (x0, y0, x1, y1, css_class) {
     let path = create('path');
-    path.setAttribute('d', calculate_d(x0, y0, x1, y1));
+    path.setAttribute('d', create_d(x0, y0, x1, y1));
     path.setAttribute('class', css_class);
     return path;
 }
@@ -119,17 +129,23 @@ const remove_child = function (element, child_id) {
 const redraw_grid = function () {
     remove_child(svg, "grid");
     svg.appendChild(create_grid('grid', 'bg-grid'));
+    remove_child(svg, 'axes');
     svg.appendChild(create_axes());
 }
 
+export const update_vector_arrow = function (id, vector) {
+    let d = calculate_d(vector.x0, vector.y0, vector.x, vector.y);
+    document.getElementById(id).setAttribute('d', d);
+}
 /**
  * Adds a vector to the set.
  * @param vector
  */
-add_vector = function (vector) {
+export const add_vector = function (vector) {
     vector.id = vectors.length;
     vectors.push(vector);
-    redraw();
+    add_vector_to_group(vector);
+
     vector.add = (other) => add_vector({
         x0: vector.x0 + other.x0,
         y0: vector.x0 + other.x0,
@@ -152,7 +168,7 @@ add_vector = function (vector) {
 
 }
 
-remove_vector = function (vector_or_index) {
+export const remove_vector = function (vector_or_index) {
     let index;
     if (vector_or_index.is_vector) {
         for (let i = 0; i < vectors.length; i++) {
@@ -170,7 +186,7 @@ remove_vector = function (vector_or_index) {
     }
 
     vectors.splice(index, 1);
-    redraw();
+    remove_child(document.getElementById('vectors'), index.toString());
     return {description: `vector@${index} removed`};
 }
 
@@ -184,7 +200,7 @@ const move_vector = function (event) {
         let current_y = event.clientY;
         vectors[moving_vector.id].x = (current_x - origin_x) / grid_size;
         vectors[moving_vector.id].y = (origin_y - current_y) / grid_size;
-        moving_vector.setAttribute('d', calculate_d(origin_x, origin_y, current_x, current_y));
+        moving_vector.setAttribute('d', create_d(origin_x, origin_y, current_x, current_y));
     }
 }
 
@@ -197,22 +213,34 @@ const move_vector = function (event) {
  * }
  */
 const draw_vectors = function () {
-    const vector_group = create("g");
-    vector_group.id = 'vectors';
+    const vector_group = create_vector_group();
 
     for (let i = 0; i < vectors.length; i++) {
-        let vector_arrow = arrow(vectors[i].id,
-            origin_x + vectors[i].x0 * grid_size,
-            origin_y - vectors[i].y0 * grid_size,
-            origin_x + vectors[i].x * grid_size,
-            origin_y - vectors[i].y * grid_size,
-            'vector');
-        vector_arrow.onmousedown = function start_moving_vector(event) {
-            moving_vector = event.target;
-        };
-        vector_group.appendChild(vector_arrow);
+        add_vector_to_group(vectors[i], vector_group);
     }
     svg.appendChild(vector_group);
+}
+
+const add_vector_to_group = function (vector, vector_group) {
+    if (!vector_group) {
+        vector_group = document.getElementById('vectors');
+    }
+    if (!vector_group) {
+        vector_group = create_vector_group();
+    }
+    let vector_arrow = arrow(vector.id, vector.x0, vector.y0, vector.x, vector.y,
+        'vector');
+    vector_arrow.onmousedown = function start_moving_vector(event) {
+        moving_vector = event.target;
+    };
+    vector_group.appendChild(vector_arrow);
+}
+
+const create_vector_group = function () {
+    const vector_group = create("g");
+    vector_group.id = 'vectors';
+    svg.appendChild(vector_group);
+    return vector_group;
 }
 
 /**
@@ -233,6 +261,7 @@ const redraw = function () {
 
 const create_axes = function () {
     let axes_group = create('g');
+    axes_group.setAttribute('id', 'axes');
     let x = create_line(0, origin_y, width, origin_y, 'axis');
     x.id = 'x-axis';
     axes_group.appendChild(x);
@@ -272,9 +301,10 @@ function create_defs() {
 const create_svg = function () {
     let svg = create('svg');
 
-    svg.onmousemove = move_vector();
+    svg.onmousemove = move_vector;
     svg.onmouseup = function stop_moving_vector() {
         moving_vector = undefined;
+        update_lazy_objects();
     };
 
     let defs = create_defs();
