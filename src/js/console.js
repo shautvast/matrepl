@@ -205,7 +205,13 @@ const method_call = function (object_wrapper, method_or_property) {
 
 const functions = {
     help: () => help(),
-    vector: (args) => create_vector({x0: args[0], y0: args[1], x: args[2], y: args[3]}),
+    vector: (args) => {
+        if (args.length === 2) {
+            return create_vector({x0: 0, y0: 0, x: args[0], y: args[1]});
+        } else {
+            return create_vector({x0: args[0], y0: args[1], x: args[2], y: args[3]});
+        }
+    },
     remove: (args) => {
         if (Object.prototype.hasOwnProperty.call(args[0], ['binding'])) {
             delete state[args[0].binding];

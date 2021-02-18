@@ -14,7 +14,7 @@ The repl has the following syntax (It's work in progress, new capabilities will 
 * remove(x) removes bindings (when it's an object (eg vector), removes it from the matrix)
 * remove(@x) removes an object using it's assigned index 
 * method calls:
-  * a = vector(0,0,12,1)
+  * a = vector(12,1)
   > &gt; vector@0{x0:1, y0: 2, x:12, y:1}
   * a.type()
   > &gt; vector
@@ -33,9 +33,9 @@ The repl has the following syntax (It's work in progress, new capabilities will 
 * cmdline: npm run start
 * enter the following:
   ```
-  a=vector(0,0,0.5,0.5)
-  b=vector(0,0,-1,1)
-  c="a+b" 
+  a = vector(0.5, 0.5)
+  b = vector(-1, 1)
+  c = "a+b"
   ```
 * and press enter. Then using the mouse pointer move a or b. 
 * or type help()
