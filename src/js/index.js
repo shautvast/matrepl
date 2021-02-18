@@ -8,7 +8,7 @@ import {update_lazy_objects} from "./console";
 const SVG_NS = 'http://www.w3.org/2000/svg'; // program needs these to create svg elements
 let grid_size = 100; // this is the nr of pixels for the basis vector (1,0) (0,1)
 let half_grid_size = grid_size >> 1; // used to position the grid lines
-let vectors = []; // collection of added vectors
+let vectors = []; // collection of added vectors // maybe move to console.js
 let moving_vector; // user can move vector arrows. when moving, this refers to the arrow
 let width = window.innerWidth, height = window.innerHeight;
 let origin_x = Math.floor((width / grid_size) / 2) * grid_size + half_grid_size,
@@ -135,37 +135,8 @@ const redraw_grid = function () {
 
 export const update_vector_arrow = function (id, vector) {
     let d = calculate_d(vector.x0, vector.y0, vector.x, vector.y);
-    document.getElementById(id).setAttribute('d', d);
-}
-/**
- * Adds a vector to the set.
- * @param vector
- */
-export const add_vector = function (vector) {
-    vector.id = vectors.length;
-    vectors.push(vector);
-    add_vector_to_group(vector);
-
-    vector.add = (other) => add_vector({
-        x0: vector.x0 + other.x0,
-        y0: vector.x0 + other.x0,
-        x: vector.x + other.x,
-        y: vector.y + other.y
-    });
-    vector.multiply = (scalar) => add_vector({
-        x0: vector.x0 * scalar,
-        y0: vector.y0 * scalar,
-        x: vector.x * scalar,
-        y: vector.y * scalar
-    });
-    vector.is_vector = true;
-    vector.type = () => 'vector';
-    return { //object_wrapper
-        type: 'vector',
-        object: vector,
-        description: `vector@${vector.id}{x0:${vector.x0},y0:${vector.y0} x:${vector.x},y:${vector.y}}`,
-    };
-
+    let v = document.getElementById(id.toString());
+    v.setAttribute('d', d);
 }
 
 export const remove_vector = function (vector_or_index) {
@@ -201,6 +172,7 @@ const move_vector = function (event) {
         vectors[moving_vector.id].x = (current_x - origin_x) / grid_size;
         vectors[moving_vector.id].y = (origin_y - current_y) / grid_size;
         moving_vector.setAttribute('d', create_d(origin_x, origin_y, current_x, current_y));
+        update_lazy_objects();
     }
 }
 
@@ -216,23 +188,24 @@ const draw_vectors = function () {
     const vector_group = create_vector_group();
 
     for (let i = 0; i < vectors.length; i++) {
-        add_vector_to_group(vectors[i], vector_group);
+        add_vector_to_group(vectors[i]);
     }
     svg.appendChild(vector_group);
 }
 
-const add_vector_to_group = function (vector, vector_group) {
-    if (!vector_group) {
-        vector_group = document.getElementById('vectors');
-    }
-    if (!vector_group) {
+export const add_vector_to_group = function (vector) {
+    vectors.push(vector);
+    vector.is_visible = true;
+    let vector_group = document.getElementById('vectors');
+
+    if (vector_group === null || vector_group === undefined) {
         vector_group = create_vector_group();
     }
-    let vector_arrow = arrow(vector.id, vector.x0, vector.y0, vector.x, vector.y,
-        'vector');
+    let vector_arrow = arrow(vector.id, vector.x0, vector.y0, vector.x, vector.y, 'vector');
     vector_arrow.onmousedown = function start_moving_vector(event) {
         moving_vector = event.target;
     };
+
     vector_group.appendChild(vector_arrow);
 }
 
@@ -304,7 +277,6 @@ const create_svg = function () {
     svg.onmousemove = move_vector;
     svg.onmouseup = function stop_moving_vector() {
         moving_vector = undefined;
-        update_lazy_objects();
     };
 
     let defs = create_defs();
@@ -322,6 +294,6 @@ document.body.onresize = function recalculate_window_dimensions() {
 
 const svg = create_svg();
 document.body.appendChild(svg);
-
 svg.appendChild(create_grid('grid', 'bg-grid'));
 svg.appendChild(create_axes());
+create_vector_group();

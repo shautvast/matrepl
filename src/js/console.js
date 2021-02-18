@@ -1,6 +1,6 @@
 import {scan, token_types} from './scanner';
 import {parse} from './parser';
-import {add_vector, remove_vector, update_vector_arrow} from "./index";
+import {remove_vector, update_vector_arrow, add_vector_to_group} from "./index";
 
 /**
  * handles user input from the console div
@@ -9,6 +9,7 @@ const state = {};
 const command_input_element = document.getElementById('command_input');
 const command_history_element = document.getElementById('command_history');
 command_input_element.value = '';
+let current_object_index = 0;
 let command_history = [''];
 let command_history_index = 0;
 
@@ -22,7 +23,10 @@ export const update_lazy_objects = function () {
         if (existing_value) {
             update_vector_arrow(existing_value.object.id, value.object);
         }
-        state[object.binding].object = value.object;
+        state[object.binding].object.x0 = value.object.x0;
+        state[object.binding].object.y0 = value.object.y0;
+        state[object.binding].object.x = value.object.x;
+        state[object.binding].object.y = value.object.y;
         let description = state[object.binding].description;
         if (!description) {
             description = state[object.binding];
@@ -75,6 +79,16 @@ command_input_element.onkeyup = function handle_key_input(event) {
                 let result;
                 try {
                     result = visit_expression(statement);
+                    let object_wrapper = result.value;
+
+                    if (object_wrapper.object.is_vector) {
+                        if (object_wrapper.previous){
+                            update_vector_arrow(object_wrapper.previous.id, object_wrapper.object);
+                        } else {
+                            add_vector_to_group(result.value.object);
+                        }
+                    }
+
                     if (result.description) {
                         result = result.description;
                     }
@@ -93,20 +107,16 @@ export let visit_expression = function (expr) {
     switch (expr.type) {
         case 'declaration': {
             let value = visit_expression(expr.initializer);
-            console.log(value);
-            let existing_value = state[expr.var_name.value];
-            if (existing_value) {
-                if (existing_value.type === 'vector') {
-                    remove_vector(existing_value.object); // remove from screen
-                }
-            }
             value.binding = expr.var_name.value;
-            state[expr.var_name.value] = value;
-            let description = state[expr.var_name.value].description;
-            if (!description) {
-                description = state[expr.var_name.value]; //questionable. use toString instead of message?
+            if (value.binding in state){
+                value.previous = state[value.binding].object;
             }
-            return {description: expr.var_name.value + ':' + description};
+            state[value.binding] = value;
+            let description = state[value.binding].description;
+            if (!description) {
+                description = state[value.binding]; //questionable. use toString instead of message?
+            }
+            return {description: expr.var_name.value + ':' + description, value: value};
         }
         case 'group':
             return visit_expression(expr.expression);
@@ -196,7 +206,7 @@ const method_call = function (object_wrapper, method_or_property) {
 
 const functions = {
     help: () => help(),
-    vector: (args) => add_vector({x0: args[0], y0: args[1], x: args[2], y: args[3]}),
+    vector: (args) => create_vector({x0: args[0], y0: args[1], x: args[2], y: args[3]}),
     remove: (args) => {
         if (Object.prototype.hasOwnProperty.call(args[0], ['binding'])) {
             delete state[args[0].binding];
@@ -232,4 +242,27 @@ const addition = function (left, right) {
         return left.object.add(right.object);
     }
     return left + right;
+}
+
+export const create_vector = function (vector) { //rename to create_vector
+    vector.id = current_object_index++;
+    vector.add = (other) => create_vector({
+        x0: vector.x0 + other.x0,
+        y0: vector.x0 + other.x0,
+        x: vector.x + other.x,
+        y: vector.y + other.y
+    });
+    vector.multiply = (scalar) => create_vector({
+        x0: vector.x0 * scalar,
+        y0: vector.y0 * scalar,
+        x: vector.x * scalar,
+        y: vector.y * scalar
+    });
+    vector.is_vector = true;
+    vector.type = () => 'vector';
+    return { //object_wrapper
+        type: 'vector',
+        object: vector,
+        description: `vector@${vector.id}{x0:${vector.x0},y0:${vector.y0} x:${vector.x},y:${vector.y}}`,
+    };
 }
