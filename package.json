@@ -4,7 +4,7 @@
   "description": "MatRepl is a Matrix * and a REPL. The Print part does operations on vectors and matrices in a visual environment.",
   "main": "src/js/index.js",
   "scripts": {
-    "test": "jest --config=jest.config.js",
+    "test": "cypress open",
     "build": "webpack build",
     "watch": "webpack --watch",
     "start": "webpack serve --open --host 0.0.0.0 --port 8080"
@@ -21,7 +21,7 @@
   "homepage": "https://github.com/shautvast/matrepl#readme",
   "devDependencies": {
     "css-loader": "^5.0.2",
-    "cypress": "^6.4.0",
+    "cypress": "^6.5.0",
     "eslint": "^7.20.0",
     "eslint-loader": "^4.0.2",
     "eslint-plugin-cypress": "^2.11.2",

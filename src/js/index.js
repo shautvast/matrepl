@@ -1,5 +1,3 @@
-import './scanner.js';
-import './parser.js';
 import {update_lazy_objects} from "./console";
 
 /**
