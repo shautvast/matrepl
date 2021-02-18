@@ -16,7 +16,7 @@ let origin_x = Math.floor((width / grid_size) / 2) * grid_size + half_grid_size,
  * @param element_type path,g, etc
  * @returns SVG element
  */
-const create = function (element_type) {
+const create_svg_element = function (element_type) {
     return document.createElementNS(SVG_NS, element_type);
 }
 
@@ -29,8 +29,15 @@ const create = function (element_type) {
  * @returns {string} to put in an SVG path
  */
 const calculate_d = function (x0, y0, x1, y1) {
-    return create_d(origin_x + x0 * grid_size, origin_y - y0 * grid_size,
-        +origin_x + x1 * grid_size, origin_y - y1 * grid_size);
+    return create_d(calc_screen_x(x0), calc_screen_y(y0), calc_screen_x(x1), calc_screen_y(y1));
+}
+
+const calc_screen_x = function (x) {
+    return origin_x + x * grid_size;
+}
+
+const calc_screen_y = function (y) {
+    return origin_y - y * grid_size;
 }
 /**
  * create a d attribute from screen coordinates
@@ -54,7 +61,7 @@ const create_d = function (s_x0, s_y0, s_x1, s_y1) {
  * @returns an SVG path element
  */
 const create_line = function (x0, y0, x1, y1, css_class) {
-    let path = create('path');
+    let path = create_svg_element('path');
     path.setAttribute('d', create_d(x0, y0, x1, y1));
     path.setAttribute('class', css_class);
     return path;
@@ -70,8 +77,8 @@ const create_line = function (x0, y0, x1, y1, css_class) {
  * @param css_class class attribute
  * @returns {SVGPathElement}
  */
-const arrow = function (id, x0, y0, x1, y1, css_class) {
-    let path = create('path');
+const create_arrow = function (id, x0, y0, x1, y1, css_class) {
+    let path = create_svg_element('path');
 
     path.setAttribute('d', calculate_d(x0, y0, x1, y1));
     path.id = id;
@@ -87,16 +94,16 @@ const arrow = function (id, x0, y0, x1, y1, css_class) {
  * @returns {SVGGElement}
  */
 const create_grid = function (css_class, bg_css_class) {
-    const group = create('g');
+    const group = create_svg_element('g');
     group.setAttribute('id', 'grid');
-    const horizontal = create('g');
+    const horizontal = create_svg_element('g');
     horizontal.setAttribute('id', 'horizontal');
     for (let y = 0; y < height; y += grid_size) {
         horizontal.appendChild(create_line(0, y + half_grid_size, width, y + half_grid_size, css_class));
         horizontal.appendChild(create_line(0, y, width, y, bg_css_class));
     }
     group.appendChild(horizontal);
-    const vertical = create('g');
+    const vertical = create_svg_element('g');
     vertical.setAttribute('id', 'vertical');
     for (let x = 0; x < width; x += grid_size) {
         vertical.appendChild(create_line(x + half_grid_size, 0, x + half_grid_size, height, css_class));
@@ -133,8 +140,14 @@ const redraw_grid = function () {
 
 export const update_vector_arrow = function (id, vector) {
     let d = calculate_d(vector.x0, vector.y0, vector.x, vector.y);
-    let v = document.getElementById(id.toString());
-    v.setAttribute('d', d);
+    document.getElementById(id.toString()).setAttribute('d', d);
+    update_label_position(id, calc_screen_x(vector.x) + 5, calc_screen_y(vector.y) + 5);
+}
+
+const update_label_position = function (id, x, y) {
+    let label = document.getElementById('l' + id);
+    label.setAttribute('x', x.toString());
+    label.setAttribute('y', y.toString());
 }
 
 export const remove_vector = function (vector_or_index) {
@@ -170,6 +183,7 @@ const move_vector = function (event) {
         vectors[moving_vector.id].x = (current_x - origin_x) / grid_size;
         vectors[moving_vector.id].y = (origin_y - current_y) / grid_size;
         moving_vector.setAttribute('d', create_d(origin_x, origin_y, current_x, current_y));
+        update_label_position(moving_vector.id, current_x + 5, current_y + 5);
         update_lazy_objects();
     }
 }
@@ -186,25 +200,35 @@ const draw_vectors = function () {
     const vector_group = get_or_create_vector_group();
 
     for (let i = 0; i < vectors.length; i++) {
-        add_vector_to_group(vectors[i]);
+        add_vector_arrow_to_svg(vectors[i]);
     }
     svg.appendChild(vector_group);
 }
 
-export const add_vector_to_group = function (vector) {
+export const add_vector_arrow_to_svg = function (vector) {
     let vector_group = get_or_create_vector_group();
-    let vector_arrow = arrow(vector.id, vector.x0, vector.y0, vector.x, vector.y, 'vector');
+    let vector_arrow = create_arrow(vector.id, vector.x0, vector.y0, vector.x, vector.y, 'vector');
     vector_arrow.onmousedown = function start_moving_vector(event) {
         moving_vector = event.target;
     };
 
     vector_group.appendChild(vector_arrow);
+    let label = create_svg_element('text');
+    label.setAttribute('x', (calc_screen_x(vector.x) + 5).toString());
+    label.setAttribute('y', (calc_screen_y(vector.y) + 5).toString());
+    label.setAttribute('fill', 'yellow');
+    label.setAttribute('id', 'l' + vector.id);
+    let text = document.createTextNode(vector.label);
+    label.appendChild(text);
+
+    vector_group.appendChild(label);
+
 }
 
 const get_or_create_vector_group = function () {
     let vector_group = document.getElementById('vectors');
     if (vector_group === null || vector_group === undefined) {
-        vector_group = create("g");
+        vector_group = create_svg_element("g");
         svg.appendChild(vector_group);
         vector_group.id = 'vectors';
     }
@@ -229,7 +253,7 @@ const redraw = function () {
 }
 
 const create_axes = function () {
-    let axes_group = create('g');
+    let axes_group = create_svg_element('g');
     axes_group.setAttribute('id', 'axes');
     let x = create_line(0, origin_y, width, origin_y, 'axis');
     x.id = 'x-axis';
@@ -245,8 +269,8 @@ const create_axes = function () {
  * @returns {SVGDefsElement}
  */
 function create_defs() {
-    let defs = create('defs');
-    let marker = create('marker');
+    let defs = create_svg_element('defs');
+    let marker = create_svg_element('marker');
     marker.id = 'arrow';
     marker.setAttribute('orient', 'auto');
     marker.setAttribute('viewBox', '0 0 10 10');
@@ -255,7 +279,7 @@ function create_defs() {
     marker.setAttribute('markerUnits', 'strokeWidth');
     marker.setAttribute('refX', '6');
     marker.setAttribute('refY', '5');
-    let polyline = create('polyline');
+    let polyline = create_svg_element('polyline');
     polyline.setAttribute('points', '0,0 10,5 0,10 1,5');
     polyline.setAttribute('fill', 'yellow');
     marker.appendChild(polyline);
@@ -268,7 +292,7 @@ function create_defs() {
  * @returns {SVGElement}
  */
 const create_svg = function () {
-    let svg = create('svg');
+    let svg = create_svg_element('svg');
 
     svg.onmousemove = move_vector;
     svg.onmouseup = function stop_moving_vector() {

@@ -1,6 +1,6 @@
 import {scan, token_types} from './scanner';
 import {parse} from './parser';
-import {add_vector_to_group, remove_vector, update_vector_arrow, vectors} from "./index";
+import {add_vector_arrow_to_svg, remove_vector, update_vector_arrow, vectors} from "./index";
 
 /**
  * handles user input from the console div
@@ -77,13 +77,14 @@ command_input_element.onkeyup = function handle_key_input(event) {
                 try {
                     result = visit_expression(statement);
                     let object_wrapper = result.value;
-
+                    result.value.object.label = object_wrapper.binding;
                     if (object_wrapper.object.is_vector) {
                         if (object_wrapper.previous) {
                             update_vector_arrow(object_wrapper.previous.id, object_wrapper.object);
                         } else {
                             vectors.push(result.value.object);
-                            add_vector_to_group(result.value.object);
+
+                            add_vector_arrow_to_svg(result.value.object);
                         }
                     }
 
