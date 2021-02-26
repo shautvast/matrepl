@@ -1,154 +1,19 @@
-import {update_lazy_objects} from "./console";
+import {scan, token_types} from './scanner';
+import {parse} from './parser';
+import {
+    add_vector_arrow_to_svg,
+    remove_child,
+    update_vector_arrow
+} from "./svg_functions";
 
-/**
- * Main entry. draws the matrix
- */
-const SVG_NS = 'http://www.w3.org/2000/svg'; // program needs these to create svg elements
-let grid_size = 100; // this is the nr of pixels for the basis vector (1,0) (0,1)
-let half_grid_size = grid_size >> 1; // used to position the grid lines
 export let vectors = []; // collection of added vectors // maybe move to console.js
-let moving_vector; // user can move vector arrows. when moving, this refers to the arrow
-let width = window.innerWidth, height = window.innerHeight;
-let origin_x = Math.floor((width / grid_size) / 2) * grid_size + half_grid_size,
-    origin_y = Math.floor((height / grid_size) / 2) * grid_size + half_grid_size;
-/**
- * Creates an svg element
- * @param element_type path,g, etc
- * @returns SVG element
- */
-const create_svg_element = function (element_type) {
-    return document.createElementNS(SVG_NS, element_type);
-}
+const state = {};
+const command_input_element = document.getElementById('command_input');
+const command_history_element = document.getElementById('command_history');
+command_input_element.value = '';
+let command_history = [''];
+let command_history_index = 0;
 
-/**
- * calculate the screen coordinates for grid values
- * @param x0 start_x
- * @param y0 start_y
- * @param x1 end_x
- * @param y1 end y
- * @returns {string} to put in an SVG path
- */
-const calculate_d = function (x0, y0, x1, y1) {
-    return create_d(calc_screen_x(x0), calc_screen_y(y0), calc_screen_x(x1), calc_screen_y(y1));
-}
-
-const calc_screen_x = function (x) {
-    return origin_x + x * grid_size;
-}
-
-const calc_screen_y = function (y) {
-    return origin_y - y * grid_size;
-}
-/**
- * create a d attribute from screen coordinates
- * @param s_x0
- * @param s_y0
- * @param s_x1
- * @param s_y1
- * @returns {string}
- */
-const create_d = function (s_x0, s_y0, s_x1, s_y1) {
-    return "M" + s_x0 + " " + s_y0 + " L" + s_x1 + " " + s_y1;
-}
-
-/**
- * creates a SVG line (path)
- * @param x0 start_x
- * @param y0 start_y
- * @param x1 end_x
- * @param y1 end_y
- * @param css_class the css class to make up the element
- * @returns an SVG path element
- */
-const create_line = function (x0, y0, x1, y1, css_class) {
-    let path = create_svg_element('path');
-    path.setAttribute('d', create_d(x0, y0, x1, y1));
-    path.setAttribute('class', css_class);
-    return path;
-}
-
-/**
- * creates the arrow path element
- * @param id attribute
- * @param x0 start_x
- * @param y0 start_y
- * @param x1 end_x
- * @param y1 end_y
- * @param css_class class attribute
- * @returns {SVGPathElement}
- */
-const create_arrow = function (id, x0, y0, x1, y1, css_class) {
-    let path = create_svg_element('path');
-
-    path.setAttribute('d', calculate_d(x0, y0, x1, y1));
-    path.id = id;
-    path.setAttribute('class', css_class);
-    path.setAttribute('marker-end', 'url(#arrow)');
-    return path;
-}
-
-/**
- * Draws the background grid of the space
- * @param css_class class for the lines that are 'multiples of the basis vector'
- * @param bg_css_class class for in between lines
- * @returns {SVGGElement}
- */
-const create_grid = function (css_class, bg_css_class) {
-    const group = create_svg_element('g');
-    group.setAttribute('id', 'grid');
-    const horizontal = create_svg_element('g');
-    horizontal.setAttribute('id', 'horizontal');
-    for (let y = 0; y < height; y += grid_size) {
-        horizontal.appendChild(create_line(0, y + half_grid_size, width, y + half_grid_size, css_class));
-        horizontal.appendChild(create_line(0, y, width, y, bg_css_class));
-    }
-    group.appendChild(horizontal);
-    const vertical = create_svg_element('g');
-    vertical.setAttribute('id', 'vertical');
-    for (let x = 0; x < width; x += grid_size) {
-        vertical.appendChild(create_line(x + half_grid_size, 0, x + half_grid_size, height, css_class));
-        vertical.appendChild(create_line(x, 0, x, height, bg_css_class));
-    }
-    group.appendChild(vertical);
-    return group;
-}
-
-/**
- * removes child from element by id if found
- * @param element
- * @param child_id id to remove
- */
-const remove_child = function (element, child_id) {
-    let node = element.firstChild;
-    while (node && child_id !== node.id) {
-        node = node.nextSibling;
-    }
-    if (node) {
-        element.removeChild(node);
-    }
-}
-
-/**
- * removes the grid from the DOM and adds an updated one.
- */
-const redraw_grid = function () {
-    remove_child(svg, "grid");
-    svg.appendChild(create_grid('grid', 'bg-grid'));
-    remove_child(svg, 'axes');
-    svg.appendChild(create_axes());
-}
-
-export const update_vector_arrow = function (id, vector) {
-    let d = calculate_d(vector.x0, vector.y0, vector.x, vector.y);
-    document.getElementById(id.toString()).setAttribute('d', d);
-    update_label_position(id, calc_screen_x(vector.x) + 5, calc_screen_y(vector.y) + 5);
-}
-
-const update_label_position = function (id, x, y) {
-    let label = document.getElementById('l' + id);
-    label.setAttribute('x', x.toString());
-    label.setAttribute('y', y.toString());
-}
 
 export const remove_vector = function (vector_or_index) {
     let index;
@@ -172,148 +37,269 @@ export const remove_vector = function (vector_or_index) {
     return {description: `vector@${index} removed`};
 }
 
-/**
- * The moving operation. Called by onmousemove on the svg ('canvas')
- * @param event
- */
-const move_vector = function (event) {
-    if (moving_vector) {
-        let current_x = event.clientX;
-        let current_y = event.clientY;
-        vectors[moving_vector.id].x = (current_x - origin_x) / grid_size;
-        vectors[moving_vector.id].y = (origin_y - current_y) / grid_size;
-        moving_vector.setAttribute('d', create_d(origin_x, origin_y, current_x, current_y));
-        update_label_position(moving_vector.id, current_x + 5, current_y + 5);
-        update_lazy_objects();
+export const update_lazy_objects = function () {
+    let lazy_objects = Object.values(state).filter(e => Object.prototype.hasOwnProperty.apply(e, ['lazy_expression']));
+    lazy_objects.forEach(object => {
+        let value = visit_expression(object.lazy_expression);
+        let existing_value = state[object.binding];
+        if (existing_value) {
+            update_vector_arrow(existing_value.object.id, value.object);
+        }
+        state[object.binding].object.x0 = value.object.x0;
+        state[object.binding].object.y0 = value.object.y0;
+        state[object.binding].object.x = value.object.x;
+        state[object.binding].object.y = value.object.y;
+        let description = state[object.binding].description;
+        if (!description) {
+            description = state[object.binding];
+        }
+        return {description: object.binding + ':' + description};
+    });
+}
+
+export const adjust_input_element_height = function () {
+    let num_lines = command_input_element.value.split(/\n/).length;
+    command_input_element.setAttribute('style', 'height: ' + num_lines + 'em');
+    if (num_lines > 1) {
+        command_input_element.setAttribute('class', 'multiline');
+    } else {
+        command_input_element.setAttribute('class', 'single_line');
     }
 }
 
-/**
- * Draws all the vectors.
- *
- * vector {
- *     x0,y0 origin
- *     x,y coordinates
- * }
- */
-const draw_vectors = function () {
-    const vector_group = get_or_create_vector_group();
-
-    for (let i = 0; i < vectors.length; i++) {
-        add_vector_arrow_to_svg(vectors[i]);
+command_input_element.onkeyup = function handle_key_input(event) {
+    adjust_input_element_height();
+    if (event.key === 'ArrowUp') {
+        if (command_history_index > -1) {
+            command_input_element.value = command_history[command_history_index];
+            if (command_history_index > 0) {
+                command_history_index -= 1;
+            }
+        }
     }
-    svg.appendChild(vector_group);
+    if (event.key === 'ArrowDown') {
+        if (command_history_index < command_history.length - 1) {
+            command_history_index += 1;
+            command_input_element.value = command_history[command_history_index];
+        } else {
+            command_input_element.value = '';
+        }
+    }
+    if (event.key === 'Enter') {
+        handle_enter();
+    }
+};
+
+const handle_enter = function(){
+    let commands = command_input_element.value;
+    command_input_element.value = '';
+    adjust_input_element_height();
+    let command_array = commands.split(/\n/);
+    for (let i = 0; i < command_array.length; i++) {
+        let command = command_array[i];
+        if (command.length > 0) {
+            command_history_element.innerText += command + "\n";
+            command_input_element.value = '';
+            command_history_index = command_history.length;
+            let tokens = scan(command);
+            let statement = parse(tokens);
+            let result;
+            try {
+                result = visit_expression(statement);
+                let object_wrapper = result.value;
+                result.value.object.label = object_wrapper.binding;
+                if (object_wrapper.object.is_vector) {
+                    if (object_wrapper.previous) {
+                        update_vector_arrow(object_wrapper.previous.id, object_wrapper.object);
+                    } else {
+                        vectors.push(result.value.object);
+
+                        add_vector_arrow_to_svg(result.value.object);
+                    }
+                }
+
+                if (result.description) {
+                    result = result.description;
+                }
+            } catch (e) {
+                result = e.message;
+            }
+            command_history_element.innerText += result + "\n";
+            command_history.push(command);
+            command_history_element.scrollTo(0, command_history_element.scrollHeight);
+        }
+    }
 }
 
-export const add_vector_arrow_to_svg = function (vector) {
-    let vector_group = get_or_create_vector_group();
-    let vector_arrow = create_arrow(vector.id, vector.x0, vector.y0, vector.x, vector.y, 'vector');
-    vector_arrow.onmousedown = function start_moving_vector(event) {
-        moving_vector = event.target;
+const visit_expression = function (expr) {
+    switch (expr.type) {
+        case 'declaration': {
+            let value = visit_expression(expr.initializer);
+            value.binding = expr.var_name.value;
+            if (value.binding in state) {
+                value.previous = state[value.binding].object;
+            }
+            state[value.binding] = value;
+            let description = state[value.binding].description;
+            if (!description) {
+                description = state[value.binding]; //questionable. use toString instead of message?
+            }
+
+            return {description: expr.var_name.value + ':' + description, value: value};
+        }
+        case 'group':
+            return visit_expression(expr.expression);
+        case 'unary': {
+            let right_operand = visit_expression(expr.right);
+            if (expr.operator === token_types.MINUS) {
+                return -right_operand;
+            } else if (expr.operator === token_types.NOT) {
+                return !right_operand;
+            } else {
+                throw {message: 'illegal unary operator'};
+            }
+        }
+        case 'binary': {
+            let left = visit_expression(expr.left);
+            let right = visit_expression(expr.right);
+            switch (expr.operator) {
+                case token_types.MINUS:
+                    return left - right;
+                case token_types.PLUS:
+                    return addition(left, right);
+                case token_types.STAR:
+                    return multiplication(left, right);
+                case token_types.SLASH:
+                    return left / right;
+                case token_types.DOT:
+                    return method_call(left, expr.right);
+            }
+            throw {message: 'illegal binary operator'};
+        }
+        case 'identifier': {
+            if (state[expr.name]) {
+                return state[expr.name];
+            } else {
+                break;
+            }
+        }
+        case 'literal':
+            return expr.value;
+        case 'call':
+            return function_call(expr.name, expr.arguments);
+        case 'lazy': {
+            let r = visit_expression(expr.value);
+            r.lazy_expression = expr.value;
+            return r;
+        }
+    }
+}
+
+const function_call = function (function_name, argument_exprs) {
+    let arguments_list = [];
+    for (let i = 0; i < argument_exprs.length; i++) {
+        arguments_list.push(visit_expression(argument_exprs[i]));
+    }
+    if (Object.prototype.hasOwnProperty.apply(functions, [function_name])) {
+        return functions[function_name](arguments_list);
+    } else {
+        let arg_list = '';
+        for (let i = 0; i < argument_exprs.length; i++) {
+            if (i > 0) {
+                arg_list += ',';
+            }
+            arg_list += argument_exprs[i].value_type;
+        }
+        return 'unimplemented: ' + function_name + '(' + arg_list + ')';
+    }
+}
+
+const method_call = function (object_wrapper, method_or_property) {
+    if (object_wrapper) {
+        if (method_or_property.type === 'call') { // method
+            if (typeof object_wrapper.object[method_or_property.name] !== 'function') {
+                throw {message: `method ${method_or_property.name} not found on ${object_wrapper.type}`};
+            }
+            return object_wrapper.object[method_or_property.name].apply(object_wrapper, method_or_property.arguments);
+
+        } else { // property
+            if (!Object.prototype.hasOwnProperty.call(object_wrapper.object, [method_or_property.name])) {
+                throw {message: `property ${method_or_property.name} not found on ${object_wrapper.type}`};
+            }
+            return object_wrapper.object[method_or_property.name];
+        }
+    } else {
+        throw {message: `not found: ${object_wrapper}`};
+    }
+}
+
+const functions = {
+    help: () => help(),
+    vector: (args) => {
+        if (args.length === 2) {
+            return create_vector({x0: 0, y0: 0, x: args[0], y: args[1]});
+        } else {
+            return create_vector({x0: args[0], y0: args[1], x: args[2], y: args[3]});
+        }
+    },
+    remove: (args) => {
+        if (Object.prototype.hasOwnProperty.call(args[0], ['binding'])) {
+            delete state[args[0].binding];
+            return remove_vector(args[0].object); // by binding value
+        } else {
+            return remove_vector(args[0]); // by index (@...)
+        }
+
+    },
+}
+
+const help = function () {
+    return {
+        description:
+            `- vector(<x0>, <y0>, <x>, <y>): draws a vector from x0,y0 to x,y
+                     - remove(<identifier>|<ref>): removes an object, 
+                        a ref is @n where n is the reference number asigned to the object`
+    }
+}
+
+const multiplication = function (left, right) {
+    if (left.object && left.type === 'vector' && !right.object) {
+        return left.object.multiply(right);
+    }
+    if (right.object && right.type === 'vector' && !left.object) {
+        return right.object.multiply(left);
+    }
+    return left * right;
+}
+
+const addition = function (left, right) {
+    if (left.object && left.type === 'vector' && right.object && right.type === 'vector') {
+        return left.object.add(right.object);
+    }
+    return left + right;
+}
+
+export const create_vector = function (vector) { //rename to create_vector
+    vector.id = vectors.length;
+    vector.add = (other) => create_vector({
+        x0: vector.x0 + other.x0,
+        y0: vector.x0 + other.x0,
+        x: vector.x + other.x,
+        y: vector.y + other.y
+    });
+    vector.multiply = (scalar) => create_vector({
+        x0: vector.x0 * scalar,
+        y0: vector.y0 * scalar,
+        x: vector.x * scalar,
+        y: vector.y * scalar
+    });
+    vector.is_vector = true;
+    vector.type = () => 'vector';
+    return { //object_wrapper
+        type: 'vector',
+        object: vector,
+        description: `vector@${vector.id}{x0:${vector.x0},y0:${vector.y0} x:${vector.x},y:${vector.y}}`,
     };
-
-    vector_group.appendChild(vector_arrow);
-    let label = create_svg_element('text');
-    label.setAttribute('x', (calc_screen_x(vector.x) + 5).toString());
-    label.setAttribute('y', (calc_screen_y(vector.y) + 5).toString());
-    label.setAttribute('fill', 'yellow');
-    label.setAttribute('id', 'l' + vector.id);
-    let text = document.createTextNode(vector.label);
-    label.appendChild(text);
-
-    vector_group.appendChild(label);
-
 }
 
-const get_or_create_vector_group = function () {
-    let vector_group = document.getElementById('vectors');
-    if (vector_group === null || vector_group === undefined) {
-        vector_group = create_svg_element("g");
-        svg.appendChild(vector_group);
-        vector_group.id = 'vectors';
-    }
 
-    return vector_group;
-}
-
-/**
- * Removes all vectors in the svg and calls draw_vectors to draw updated versions.
- */
-const redraw_vectors = function () {
-    remove_child(svg, 'vectors');
-    draw_vectors();
-}
-
-/**
- * (re)draws all
- */
-const redraw = function () {
-    redraw_grid();
-    redraw_vectors();
-}
-
-const create_axes = function () {
-    let axes_group = create_svg_element('g');
-    axes_group.setAttribute('id', 'axes');
-    let x = create_line(0, origin_y, width, origin_y, 'axis');
-    x.id = 'x-axis';
-    axes_group.appendChild(x);
-    let y = create_line(origin_x, 0, origin_x, height, 'axis');
-    y.id = 'y-axis';
-    axes_group.appendChild(y);
-    return axes_group;
-}
-
-/**
- * setup the arrow head for the vector
- * @returns {SVGDefsElement}
- */
-function create_defs() {
-    let defs = create_svg_element('defs');
-    let marker = create_svg_element('marker');
-    marker.id = 'arrow';
-    marker.setAttribute('orient', 'auto');
-    marker.setAttribute('viewBox', '0 0 10 10');
-    marker.setAttribute('markerWidth', '3');
-    marker.setAttribute('markerHeight', '4');
-    marker.setAttribute('markerUnits', 'strokeWidth');
-    marker.setAttribute('refX', '6');
-    marker.setAttribute('refY', '5');
-    let polyline = create_svg_element('polyline');
-    polyline.setAttribute('points', '0,0 10,5 0,10 1,5');
-    polyline.setAttribute('fill', 'yellow');
-    marker.appendChild(polyline);
-    defs.appendChild(marker);
-    return defs;
-}
-
-/**
- * Creates the SVG
- * @returns {SVGElement}
- */
-const create_svg = function () {
-    let svg = create_svg_element('svg');
-
-    svg.onmousemove = move_vector;
-    svg.onmouseup = function stop_moving_vector() {
-        moving_vector = undefined;
-    };
-
-    let defs = create_defs();
-    svg.appendChild(defs);
-    return svg;
-}
-
-document.body.onresize = function recalculate_window_dimensions() {
-    width = window.innerWidth;
-    height = window.innerHeight;
-    origin_x = Math.floor((width / grid_size) / 2) * grid_size + half_grid_size;
-    origin_y = Math.floor((height / grid_size) / 2) * grid_size + half_grid_size;
-    redraw();
-}
-
-const svg = create_svg();
-document.body.appendChild(svg);
-svg.appendChild(create_grid('grid', 'bg-grid'));
-svg.appendChild(create_axes());
-get_or_create_vector_group();
