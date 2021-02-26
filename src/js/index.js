@@ -1,10 +1,6 @@
 import {scan, token_types} from './scanner';
 import {parse} from './parser';
-import {
-    add_vector_arrow_to_svg,
-    remove_child,
-    update_vector_arrow
-} from "./svg_functions";
+import {add_vector_arrow_to_svg, remove_child, update_vector_arrow} from "./svg_functions";
 
 export let vectors = []; // collection of added vectors // maybe move to console.js
 const state = {};
@@ -13,7 +9,7 @@ const command_history_element = document.getElementById('command_history');
 command_input_element.value = '';
 let command_history = [''];
 let command_history_index = 0;
-
+let vectors_index_sequence = 0;
 
 export const remove_vector = function (vector_or_index) {
     let index;
@@ -49,10 +45,12 @@ export const update_lazy_objects = function () {
         state[object.binding].object.y0 = value.object.y0;
         state[object.binding].object.x = value.object.x;
         state[object.binding].object.y = value.object.y;
+        state[object.binding].object.id = value.object.id;
         let description = state[object.binding].description;
         if (!description) {
             description = state[object.binding];
         }
+
         return {description: object.binding + ':' + description};
     });
 }
@@ -69,7 +67,7 @@ export const adjust_input_element_height = function () {
 
 command_input_element.onkeyup = function handle_key_input(event) {
     adjust_input_element_height();
-    if (event.key === 'ArrowUp') {
+    if (event.key === 'ArrowUp' && !event.shiftKey) {
         if (command_history_index > -1) {
             command_input_element.value = command_history[command_history_index];
             if (command_history_index > 0) {
@@ -77,7 +75,7 @@ command_input_element.onkeyup = function handle_key_input(event) {
             }
         }
     }
-    if (event.key === 'ArrowDown') {
+    if (event.key === 'ArrowDown' && !event.shiftKey) {
         if (command_history_index < command_history.length - 1) {
             command_history_index += 1;
             command_input_element.value = command_history[command_history_index];
@@ -90,7 +88,7 @@ command_input_element.onkeyup = function handle_key_input(event) {
     }
 };
 
-const handle_enter = function(){
+const handle_enter = function () {
     let commands = command_input_element.value;
     command_input_element.value = '';
     adjust_input_element_height();
@@ -106,15 +104,15 @@ const handle_enter = function(){
             let result;
             try {
                 result = visit_expression(statement);
-                let object_wrapper = result.value;
-                result.value.object.label = object_wrapper.binding;
+                let object_wrapper = result.value !== undefined ? result.value : result;
+                object_wrapper.object.label = object_wrapper.binding;
                 if (object_wrapper.object.is_vector) {
                     if (object_wrapper.previous) {
                         update_vector_arrow(object_wrapper.previous.id, object_wrapper.object);
                     } else {
-                        vectors.push(result.value.object);
+                        vectors.push(object_wrapper.object);
 
-                        add_vector_arrow_to_svg(result.value.object);
+                        add_vector_arrow_to_svg(object_wrapper.object);
                     }
                 }
 
@@ -136,7 +134,7 @@ const visit_expression = function (expr) {
         case 'declaration': {
             let value = visit_expression(expr.initializer);
             value.binding = expr.var_name.value;
-            if (value.binding in state) {
+            if (state[value.binding]) {
                 value.previous = state[value.binding].object;
             }
             state[value.binding] = value;
@@ -144,7 +142,7 @@ const visit_expression = function (expr) {
             if (!description) {
                 description = state[value.binding]; //questionable. use toString instead of message?
             }
-
+            update_lazy_objects();
             return {description: expr.var_name.value + ':' + description, value: value};
         }
         case 'group':
@@ -280,7 +278,7 @@ const addition = function (left, right) {
 }
 
 export const create_vector = function (vector) { //rename to create_vector
-    vector.id = vectors.length;
+    vector.id = vectors_index_sequence++;
     vector.add = (other) => create_vector({
         x0: vector.x0 + other.x0,
         y0: vector.x0 + other.x0,

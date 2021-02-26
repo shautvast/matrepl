@@ -188,7 +188,8 @@ export const update_vector_arrow = function (id, vector) {
     let arrow = document.getElementById(id.toString());
     if (arrow) {
         arrow.setAttribute('d', d);
-        update_label_position(id, calc_screen_x(vector.x) + 5, calc_screen_y(vector.y) + 5);
+        arrow.id = vector.id;
+        update_label_position(id, vector.id, calc_screen_x(vector.x) + 5, calc_screen_y(vector.y) + 5);
     }
 }
 
@@ -235,10 +236,11 @@ const create_defs = function () {
     return defs;
 }
 
-const update_label_position = function (id, x, y) {
+const update_label_position = function (id, new_id, x, y) {
     let label = document.getElementById('l' + id);
     label.setAttribute('x', x.toString());
     label.setAttribute('y', y.toString());
+    label.id = 'l' + new_id;
 }
 
 /**
@@ -252,7 +254,7 @@ const move_vector = function (event) {
         vectors[moving_vector.id].x = (current_x - origin_x) / grid_size;
         vectors[moving_vector.id].y = (origin_y - current_y) / grid_size;
         moving_vector.setAttribute('d', create_d(origin_x, origin_y, current_x, current_y));
-        update_label_position(moving_vector.id, current_x + 5, current_y + 5);
+        update_label_position(moving_vector.id,moving_vector.id, current_x + 5, current_y + 5);
         update_lazy_objects();
     }
 }
