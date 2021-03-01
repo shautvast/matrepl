@@ -101,31 +101,30 @@ const handle_enter = function () {
             command_history_index = command_history.length;
             let tokens = scan(command);
             let statement = parse(tokens);
-            let result;
+            let value;
             try {
-                result = visit_expression(statement);
-                let object_wrapper = result.value !== undefined ? result.value : result;
-                if (object_wrapper) {
-                    if (object_wrapper.is_object) {
-                        object_wrapper.label = object_wrapper.binding;
-                        if (object_wrapper.is_vector) {
-                            if (object_wrapper.previous) {
-                                update_vector_arrow(object_wrapper.previous.id, object_wrapper);
-                            } else {
-                                vectors.push(object_wrapper);
-
-                                add_vector_arrow_to_svg(object_wrapper);
+                value = visit_expression(statement);
+                if (value.is_visual) {
+                    value.label = value.binding;
+                    if (value.is_vector) {
+                        if (value.previous && value.previous.is_visual) {
+                            update_vector_arrow(value.previous.id, value);
+                        } else {
+                            if (value.is_new) {
+                                value.is_new = false;
+                                vectors.push(value);
+                                add_vector_arrow_to_svg(value);
                             }
                         }
                     }
                 }
-                if (result.description) {
-                    result = result.description;
+                if (value.description) {
+                    value = value.description;
                 }
             } catch (e) {
-                result = e.message;
+                value = e.message;
             }
-            command_history_element.innerText += result + "\n";
+            command_history_element.innerText += value + "\n";
             command_history.push(command);
             command_history_element.scrollTo(0, command_history_element.scrollHeight);
         }
@@ -136,12 +135,16 @@ const visit_expression = function (expr) {
     switch (expr.type) {
         case 'declaration': {
             let value = visit_expression(expr.initializer);
-            if (!value.is_object) {                     // if it's a primitive value,
-                value = {                               // turn it into a object that returns the value
-                    description: value,
+            if (!value.is_visual) {                     // if it's a primitive value,
+                value = {                               // wrap it into a object that returns the value
+                    _value: value,                      // references the original value
+                    toString: function () {
+                        return this._value;
+                    },
                     get: function () {
-                        return this.description;        // description IS value in this case
-                    }
+                        return this._value;
+                    },
+                    is_visual: false
                 };
             }
             value.binding = expr.var_name.value;        // store the variable name with it, to handle reassignment.
@@ -152,7 +155,7 @@ const visit_expression = function (expr) {
 
             update_lazy_objects();                      // reevaluate any lazy expressions
 
-            return {description: expr.var_name.value + ':' + value.description, value: value};
+            return value;
         }
         case 'group':                                   // expression within parentheses
             return visit_expression(expr.expression);
@@ -185,7 +188,9 @@ const visit_expression = function (expr) {
         }
         case 'identifier': {
             if (state[expr.name]) {
-                return state[expr.name].get();
+                let object = state[expr.name];
+                let get = object.get();
+                return get;
             } else {
                 break;
             }
@@ -278,17 +283,17 @@ const multiplication = function (left, right) {
         });
     };
 
-    if (left && left.type === 'vector' && !right) {
+    if (left && left.is_vector && !right.is_vector) {
         return multiply(left, right);
     }
-    if (right && right.type === 'vector' && !left) {
+    if (right && right.is_vector && !left.is_vector) {
         return multiply(right, left);
     }
     return left * right;
 }
 
 const addition = function (left, right) {
-    if (left && left.type === 'vector' && right && right.type === 'vector') {
+    if (left && left.is_vector && right && right.is_vector) {
         return create_vector({
             x0: left.x0 + right.x0,
             y0: left.x0 + right.x0,
@@ -300,7 +305,7 @@ const addition = function (left, right) {
 }
 
 const subtract = function (left, right) {
-    if (left && left.type === 'vector' && right && right.type === 'vector') {
+    if (left && left.is_vector && right && right.is_vector) {
         return create_vector({
             x0: left.x0 - right.x0,
             y0: left.x0 - right.x0,
@@ -313,14 +318,14 @@ const subtract = function (left, right) {
 
 export const create_vector = function (vector) { //rename to create_vector
     vector.id = vectors_index_sequence++;
-    vector.is_object = true;
+    vector.is_visual = true;
     vector.is_vector = true;
-    vector.type = () => 'vector';
-    vector.type = 'vector';
-    vector.description = `vector@${vector.id}{x0:${vector.x0},y0:${vector.y0} x:${vector.x},y:${vector.y}}`;
-
+    vector.is_new = true;
+    vector.toString = function () {
+        return `vector@${this.id}{x0:${vector.x0},y0:${vector.y0} x:${vector.x},y:${vector.y}}`;
+    };
     vector.get = function () {
-        return this;
+        return vector;
     }
     return vector;
 }
