@@ -136,32 +136,30 @@ const visit_expression = function (expr) {
     switch (expr.type) {
         case 'declaration': {
             let value = visit_expression(expr.initializer);
-            if (!value.is_object) {
-                value = {
+            if (!value.is_object) {                     // if it's a primitive value,
+                value = {                               // turn it into a object that returns the value
                     description: value,
                     get: function () {
-                        return description; // description IS value in this case
+                        return this.description;        // description IS value in this case
                     }
                 };
             }
-            value.binding = expr.var_name.value;
-            if (state[value.binding]) {
-                value.previous = state[value.binding];
+            value.binding = expr.var_name.value;        // store the variable name with it, to handle reassignment.
+            if (state[value.binding]) {                 // do reassignment
+                value.previous = state[value.binding];  // remember previous value, to remove it from the visualisation
             }
-            state[value.binding] = value;
-            let description = state[value.binding].description;
-            if (!description) {
-                description = value; // primitive value (eg number, string)
-            }
-            update_lazy_objects();
-            return {description: expr.var_name.value + ':' + description, value: value};
+            state[value.binding] = value;               // assign new value to binding
+
+            update_lazy_objects();                      // reevaluate any lazy expressions
+
+            return {description: expr.var_name.value + ':' + value.description, value: value};
         }
-        case 'group':
+        case 'group':                                   // expression within parentheses
             return visit_expression(expr.expression);
         case 'unary': {
             let right_operand = visit_expression(expr.right);
             if (expr.operator === token_types.MINUS) {
-                return -right_operand;
+                return -right_operand; //TODO create negate function (because now it only works for numbers)
             } else if (expr.operator === token_types.NOT) {
                 return !right_operand;
             } else {
@@ -302,10 +300,15 @@ const addition = function (left, right) {
 }
 
 const subtract = function (left, right) {
-    // if (left && left.type === 'vector' && right.object && right.type === 'vector') {
-    //     return left.subtract(right);
-    // }
-    // return left - right;
+    if (left && left.type === 'vector' && right && right.type === 'vector') {
+        return create_vector({
+            x0: left.x0 - right.x0,
+            y0: left.x0 - right.x0,
+            x: left.x - right.x,
+            y: left.y - right.y
+        });
+    }
+    return left - right;
 }
 
 export const create_vector = function (vector) { //rename to create_vector
