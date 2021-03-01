@@ -39,13 +39,13 @@ export const update_lazy_objects = function () {
         let value = visit_expression(object.lazy_expression);
         let existing_value = state[object.binding];
         if (existing_value) {
-            update_vector_arrow(existing_value.object.id, value.object);
+            update_vector_arrow(existing_value.id, value);
         }
-        state[object.binding].object.x0 = value.object.x0;
-        state[object.binding].object.y0 = value.object.y0;
-        state[object.binding].object.x = value.object.x;
-        state[object.binding].object.y = value.object.y;
-        state[object.binding].object.id = value.object.id;
+        state[object.binding].x0 = value.x0;
+        state[object.binding].y0 = value.y0;
+        state[object.binding].x = value.x;
+        state[object.binding].y = value.y;
+        state[object.binding].id = value.id;
         let description = state[object.binding].description;
         if (!description) {
             description = state[object.binding];
@@ -105,17 +105,20 @@ const handle_enter = function () {
             try {
                 result = visit_expression(statement);
                 let object_wrapper = result.value !== undefined ? result.value : result;
-                object_wrapper.object.label = object_wrapper.binding;
-                if (object_wrapper.object.is_vector) {
-                    if (object_wrapper.previous) {
-                        update_vector_arrow(object_wrapper.previous.id, object_wrapper.object);
-                    } else {
-                        vectors.push(object_wrapper.object);
+                if (object_wrapper) {
+                    if (object_wrapper.is_object) {
+                        object_wrapper.label = object_wrapper.binding;
+                        if (object_wrapper.is_vector) {
+                            if (object_wrapper.previous) {
+                                update_vector_arrow(object_wrapper.previous.id, object_wrapper);
+                            } else {
+                                vectors.push(object_wrapper);
 
-                        add_vector_arrow_to_svg(object_wrapper.object);
+                                add_vector_arrow_to_svg(object_wrapper);
+                            }
+                        }
                     }
                 }
-
                 if (result.description) {
                     result = result.description;
                 }
@@ -133,14 +136,22 @@ const visit_expression = function (expr) {
     switch (expr.type) {
         case 'declaration': {
             let value = visit_expression(expr.initializer);
+            if (!value.is_object) {
+                value = {
+                    description: value,
+                    get: function () {
+                        return description; // description IS value in this case
+                    }
+                };
+            }
             value.binding = expr.var_name.value;
             if (state[value.binding]) {
-                value.previous = state[value.binding].object;
+                value.previous = state[value.binding];
             }
             state[value.binding] = value;
             let description = state[value.binding].description;
             if (!description) {
-                description = state[value.binding]; //questionable. use toString instead of message?
+                description = value; // primitive value (eg number, string)
             }
             update_lazy_objects();
             return {description: expr.var_name.value + ':' + description, value: value};
@@ -162,7 +173,7 @@ const visit_expression = function (expr) {
             let right = visit_expression(expr.right);
             switch (expr.operator) {
                 case token_types.MINUS:
-                    return left - right;
+                    return subtract(left, right);
                 case token_types.PLUS:
                     return addition(left, right);
                 case token_types.STAR:
@@ -176,7 +187,7 @@ const visit_expression = function (expr) {
         }
         case 'identifier': {
             if (state[expr.name]) {
-                return state[expr.name];
+                return state[expr.name].get();
             } else {
                 break;
             }
@@ -215,16 +226,17 @@ const function_call = function (function_name, argument_exprs) {
 const method_call = function (object_wrapper, method_or_property) {
     if (object_wrapper) {
         if (method_or_property.type === 'call') { // method
-            if (typeof object_wrapper.object[method_or_property.name] !== 'function') {
+            if (typeof object_wrapper[method_or_property.name] !== 'function') {
                 throw {message: `method ${method_or_property.name} not found on ${object_wrapper.type}`};
             }
-            return object_wrapper.object[method_or_property.name].apply(object_wrapper, method_or_property.arguments);
+
+            return object_wrapper[method_or_property.name].apply(object_wrapper, method_or_property.arguments);
 
         } else { // property
-            if (!Object.prototype.hasOwnProperty.call(object_wrapper.object, [method_or_property.name])) {
+            if (!Object.prototype.hasOwnProperty.call(object_wrapper, [method_or_property.name])) {
                 throw {message: `property ${method_or_property.name} not found on ${object_wrapper.type}`};
             }
-            return object_wrapper.object[method_or_property.name];
+            return object_wrapper[method_or_property.name];
         }
     } else {
         throw {message: `not found: ${object_wrapper}`};
@@ -243,11 +255,8 @@ const functions = {
     remove: (args) => {
         if (Object.prototype.hasOwnProperty.call(args[0], ['binding'])) {
             delete state[args[0].binding];
-            return remove_vector(args[0].object); // by binding value
-        } else {
-            return remove_vector(args[0]); // by index (@...)
         }
-
+        return remove_vector(args[0]);
     },
 }
 
@@ -261,43 +270,56 @@ const help = function () {
 }
 
 const multiplication = function (left, right) {
-    if (left.object && left.type === 'vector' && !right.object) {
-        return left.object.multiply(right);
+
+    const multiply = function (vector, scalar) {
+        return create_vector({
+            x0: vector.x0 * scalar,
+            y0: vector.y0 * scalar,
+            x: vector.x * scalar,
+            y: vector.y * scalar
+        });
+    };
+
+    if (left && left.type === 'vector' && !right) {
+        return multiply(left, right);
     }
-    if (right.object && right.type === 'vector' && !left.object) {
-        return right.object.multiply(left);
+    if (right && right.type === 'vector' && !left) {
+        return multiply(right, left);
     }
     return left * right;
 }
 
 const addition = function (left, right) {
-    if (left.object && left.type === 'vector' && right.object && right.type === 'vector') {
-        return left.object.add(right.object);
+    if (left && left.type === 'vector' && right && right.type === 'vector') {
+        return create_vector({
+            x0: left.x0 + right.x0,
+            y0: left.x0 + right.x0,
+            x: left.x + right.x,
+            y: left.y + right.y
+        });
     }
     return left + right;
 }
 
+const subtract = function (left, right) {
+    // if (left && left.type === 'vector' && right.object && right.type === 'vector') {
+    //     return left.subtract(right);
+    // }
+    // return left - right;
+}
+
 export const create_vector = function (vector) { //rename to create_vector
     vector.id = vectors_index_sequence++;
-    vector.add = (other) => create_vector({
-        x0: vector.x0 + other.x0,
-        y0: vector.x0 + other.x0,
-        x: vector.x + other.x,
-        y: vector.y + other.y
-    });
-    vector.multiply = (scalar) => create_vector({
-        x0: vector.x0 * scalar,
-        y0: vector.y0 * scalar,
-        x: vector.x * scalar,
-        y: vector.y * scalar
-    });
+    vector.is_object = true;
     vector.is_vector = true;
     vector.type = () => 'vector';
-    return { //object_wrapper
-        type: 'vector',
-        object: vector,
-        description: `vector@${vector.id}{x0:${vector.x0},y0:${vector.y0} x:${vector.x},y:${vector.y}}`,
-    };
+    vector.type = 'vector';
+    vector.description = `vector@${vector.id}{x0:${vector.x0},y0:${vector.y0} x:${vector.x},y:${vector.y}}`;
+
+    vector.get = function () {
+        return this;
+    }
+    return vector;
 }
 
 
