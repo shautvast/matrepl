@@ -37,17 +37,18 @@ const show = function (vector) {
 }
 
 export const update_lazy_objects = function () {
-    let b = Object.values(bindings);
-    for (let i = 0; i < b.length; i++) {
+    let b = Object.values(bindings);                // a lazy expression must be bound
+    for (let i = 0; i < b.length; i++) {            // unbound ones can exist, but are meaningless, because you cannot refer to them
         let binding = b[i];
-        if (state[binding.name].lazy_expression) {
-            let value = visit(state[binding.name].lazy_expression);
-            let existing_value = bindings[binding.name].evaluated;
+        if (state[binding.name].lazy_expression) {                  // if lazy,
+            let value = visit(state[binding.name].lazy_expression); // reevaluate,
+            let existing_value = bindings[binding.name].evaluated;  // update view
             if (existing_value.id) {
+                // update view after reevaluation of lazy vectors
                 update_vector_arrow(existing_value.id, value);
                 bindings[binding.name].evaluated = value;
             } else if (value.is_new && value.is_vector){
-                // hidden lazy object reappearing
+                // hidden lazy vector reappears
                 value.label_text=binding.name;
                 add_vector_arrow_to_svg(value);
             }
