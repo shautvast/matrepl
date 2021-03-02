@@ -19,6 +19,7 @@ let command_history_index = 0;
 let index_sequence = 0;
 
 const hide = function (vector) {
+    vector.visible = false;
     remove_vector_arrow(vector);
     return {description: `vector@${vector.id} is hidden`};
 }
@@ -30,21 +31,28 @@ const label = function (vector, text) {
 }
 
 const show = function (vector) {
+    vector.visible = true;
     add_vector_arrow_to_svg(vector);
     return {description: `vector@${vector.id} is visible`};
 }
 
 export const update_lazy_objects = function () {
-    Object.values(bindings).forEach(binding => {
+    let b = Object.values(bindings);
+    for (let i = 0; i < b.length; i++) {
+        let binding = b[i];
         if (state[binding.name].lazy_expression) {
             let value = visit(state[binding.name].lazy_expression);
             let existing_value = bindings[binding.name].evaluated;
-            if (existing_value) {
+            if (existing_value.id) {
                 update_vector_arrow(existing_value.id, value);
                 bindings[binding.name].evaluated = value;
+            } else if (value.is_new && value.is_vector){
+                // hidden lazy object reappearing
+                value.label_text=binding.name;
+                add_vector_arrow_to_svg(value);
             }
         }
-    });
+    }
 }
 
 export const adjust_input_element_height = function () {
@@ -109,16 +117,18 @@ const handle_enter = function () {
                 }
 
                 if (value.is_visual) {
-                    if (value.is_vector) {
-                        if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
-                            update_vector_arrow(bindings[binding].previous.id, value);
-                        } else {
-                            if (value.is_new) {
-                                value.label_text = binding ? binding : "";
-                                value.is_new = false;
-                                add_vector_arrow(value);
-                            }
+                    if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
+                        update_vector_arrow(bindings[binding].previous.id, value);
+                    } else {
+                        if (value.is_new) {
+                            value.label_text = binding ? binding : "";
+                            value.is_new = false;
+                            add_vector_arrow(value);
                         }
+                    }
+                } else {
+                    if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
+                        label(bindings[binding].previous, '@' + bindings[binding].previous.id);
                     }
                 }
                 update_lazy_objects();
@@ -140,8 +150,8 @@ const visit = function (expr) {
         case 'declaration': {
             let value = visit(expr.initializer);
             let binding_name = expr.var_name.value;
-            if (bindings[binding_name]) {                            // do reassignment
-                bindings[binding_name].previous = state[binding_name];    // remember previous value, to remove it from the visualisation
+            if (bindings[binding_name]) {                                // do reassignment
+                bindings[binding_name].previous = state[binding_name];   // remember previous value, to remove it from the visualisation
             } else {
                 bindings[binding_name] = {
                     is_binding: true,
@@ -150,11 +160,11 @@ const visit = function (expr) {
                     evaluated: null
                 };
             }
-            state[binding_name] = value;                             // assign new value to binding
+            state[binding_name] = value;                                // assign new value to binding
 
             return bindings[binding_name];
         }
-        case 'group':                                   // expression within parentheses
+        case 'group':                                                   // expression within parentheses
             return visit(expr.expression);
         case 'unary': {
             let right_operand = visit(expr.right);
@@ -175,7 +185,7 @@ const visit = function (expr) {
                 case token_types.STAR:
                     return multiplication(visit(expr.left), visit(expr.right));
                 case token_types.SLASH:
-                    return visit(expr.left) / visit(expr.right);
+                    return division(visit(expr.left), visit(expr.right));
                 case token_types.DOT:
                     return method_call(visit(expr.left), expr.right); // right is not evaluated. It's the method name
                 // could also be evaluated to itself, BUT it's of type call which would invoke a function (see below)
@@ -268,10 +278,10 @@ const functions = {
     hide: (args) => {
         return hide(args[0]);
     },
-    label: (args) =>{
+    label: (args) => {
         return label(args[0], args[1]);
     },
-    show: (args) =>{
+    show: (args) => {
         return show(args[0]);
     }
 }
@@ -296,13 +306,32 @@ const multiplication = function (left, right) {
         });
     };
 
-    if (left && left.is_vector && !right.is_vector) {
+    if (left.is_vector && !right.is_vector) {
         return multiply(left, right);
     }
-    if (right && right.is_vector && !left.is_vector) {
+    if (right.is_vector && !left.is_vector) {
         return multiply(right, left);
     }
     return left * right;
+}
+
+const division = function (left, right) {
+    const divide = function (vector, scalar) {
+        return create_vector({
+            x0: vector.x0 / scalar,
+            y0: vector.y0 / scalar,
+            x: vector.x / scalar,
+            y: vector.y / scalar
+        });
+    };
+
+    if (left.is_vector && !right.is_vector) {
+        return divide(left, right);
+    }
+    if (!left.is_vector && !right.is_vector) {
+        return left / right;
+    }
+    throw {message: 'meaningless division'};
 }
 
 const addition = function (left, right) {
@@ -335,6 +364,7 @@ export const create_vector = function (vector) { //rename to create_vector
     vector.is_vector = true; // for comparison
     vector.type = 'vector'; // for showing type to user
     vector.is_new = true;
+    vector.visible = true;
     vector.toString = function () {
         return `vector@${this.id}{x0:${vector.x0},y0:${vector.y0} x:${vector.x},y:${vector.y}}`;
     };
@@ -351,7 +381,7 @@ export const create_vector = function (vector) { //rename to create_vector
     return vector;
 }
 
-const resolve_arguments = function(argument_exprs) {
+const resolve_arguments = function (argument_exprs) {
     let arguments_list = [];
     for (let i = 0; i < argument_exprs.length; i++) {
         arguments_list.push(visit(argument_exprs[i]));

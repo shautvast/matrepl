@@ -191,7 +191,9 @@ const draw_vectors = function () {
 
     let vectors = Object.values(vectors_by_id);
     for (let i = 0; i < vectors.length; i++) {
-        add_vector_arrow_to_svg(vectors[i]);
+        if (vectors[i].visible) {
+            add_vector_arrow_to_svg(vectors[i]);
+        }
     }
     svg.appendChild(vector_group);
 }
@@ -231,7 +233,11 @@ export const update_vector_arrow = function (existing_id, new_vector) {
         arrow.setAttribute('d', d);
         arrow.id = new_vector.id;
         update_label(existing_id, new_vector.id, calc_screen_x(new_vector.x) + 5, calc_screen_y(new_vector.y) + 5);
+    } else {
+        add_vector_arrow_to_svg(new_vector);
     }
+    delete vectors_by_id[existing_id];
+    vectors_by_id[new_vector.id] = new_vector;
 }
 
 /**
