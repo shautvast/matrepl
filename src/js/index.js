@@ -43,7 +43,7 @@ export const update_lazy_objects = function () {
         if (state[binding.name].lazy_expression) {                  // if lazy,
             let value = visit(state[binding.name].lazy_expression); // reevaluate,
             let existing_value = bindings[binding.name].evaluated;  // update view
-            if (existing_value.id) {
+            if (existing_value && existing_value.id) {
                 // update view after reevaluation of lazy vectors
                 update_vector_arrow(existing_value.id, value);
                 bindings[binding.name].evaluated = value;
