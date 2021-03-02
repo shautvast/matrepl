@@ -66,6 +66,12 @@ export const adjust_input_element_height = function () {
     }
 }
 
+command_input_element.onkeypress = function handle_key_input(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+    }
+}
+
 command_input_element.onkeyup = function handle_key_input(event) {
     adjust_input_element_height();
     if (event.key === 'ArrowUp' && !event.shiftKey) {
@@ -100,10 +106,11 @@ const handle_enter = function () {
             command_history_element.innerText += command + "\n";
             command_input_element.value = '';
             command_history_index = command_history.length;
-            let tokens = scan(command);
-            let statement = parse(tokens);
+
             let value;
             try {
+                let tokens = scan(command);
+                let statement = parse(tokens);
                 value = visit(statement);
                 let binding;
                 if (value.is_binding) {                     // if it's declaration work with the initializer
