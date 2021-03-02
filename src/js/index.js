@@ -10,7 +10,7 @@ import {
 
 const state = {};       // binding -> value
 const bindings = {};    // binding -> {name:binding_name, evaluated: evaluated_lazy_value, previous: previous_value}
-const references = {};
+const references = {};  // for retrieval of objects by reference (@n, where n is a number)
 const command_input_element = document.getElementById('command_input');
 const command_history_element = document.getElementById('command_history');
 command_input_element.value = '';
@@ -107,10 +107,11 @@ const handle_enter = function () {
                 if (binding) {
                     bindings[binding].evaluated = value;   // store evaluation result
                 }
+
                 if (value.is_visual) {
                     if (value.is_vector) {
                         if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
-                            update_vector_arrow(value.previous.id, value);
+                            update_vector_arrow(bindings[binding].previous.id, value);
                         } else {
                             if (value.is_new) {
                                 value.label_text = binding ? binding : "";
@@ -120,6 +121,7 @@ const handle_enter = function () {
                         }
                     }
                 }
+                update_lazy_objects();
                 if (value.description) {
                     value = value.description;
                 }
