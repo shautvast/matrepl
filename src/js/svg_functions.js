@@ -1,5 +1,14 @@
-import {update_lazy_objects, vectors} from "./index";
+import {update_lazy_objects} from "./index";
 
+let vectors_by_id = {};
+const SVG_NS = 'http://www.w3.org/2000/svg'; // program needs these to create svg elements
+let grid_size = 100; // this is the nr of pixels for the basis vector (1,0) (0,1)
+let half_grid_size = grid_size >> 1; // used to position the grid lines
+
+let moving_vector; // user can move vector arrows. when moving, this refers to the arrow
+let width = window.innerWidth, height = window.innerHeight;
+let origin_x = Math.floor((width / grid_size) / 2) * grid_size + half_grid_size,
+    origin_y = Math.floor((height / grid_size) / 2) * grid_size + half_grid_size;
 
 /**
  * Creates an svg element
@@ -15,7 +24,7 @@ const create_svg_element = function (element_type) {
  * @param element
  * @param child_id id to remove
  */
-export const remove_child = function (element, child_id) {
+const remove_child = function (element, child_id) {
     let node = element.firstChild;
     while (node && child_id !== node.id) {
         node = node.nextSibling;
@@ -92,6 +101,12 @@ const create_arrow = function (id, x0, y0, x1, y1, css_class) {
     return path;
 }
 
+export const remove_vector_arrow = function (vector) {
+    delete vectors_by_id[vector.id];
+    remove_child(document.getElementById('vectors'), vector.id.toString());
+    remove_child(document.getElementById('vectors'), "l" + vector.id.toString()); //
+}
+
 /**
  * Draws the background grid of the space
  * @param css_class class for the lines that are 'multiples of the basis vector'
@@ -118,6 +133,37 @@ export const create_grid = function (css_class, bg_css_class) {
     return group;
 }
 
+export const add_vector_arrow = function (vector) {
+    vectors_by_id[vector.id] = vector;
+    add_vector_arrow_to_svg(vector);
+}
+
+function create_label(vector) {
+    let label = create_svg_element('text');
+    label.setAttribute('x', (calc_screen_x(vector.x) + 5).toString());
+    label.setAttribute('y', (calc_screen_y(vector.y) + 5).toString());
+    label.setAttribute('fill', 'yellow');
+    label.setAttribute('id', 'l' + vector.id);
+    let text_node = document.createTextNode(vector.label_text);
+    label.appendChild(text_node);
+    return label;
+}
+
+const update_label = function (id, new_id, x, y) {
+    let label = document.getElementById('l' + id);
+    label.setAttribute('x', x.toString());
+    label.setAttribute('y', y.toString());
+    label.id = 'l' + new_id;
+}
+
+export const update_label_text = function (id, text) {
+    if (text) {
+        let label = document.getElementById('l' + id);
+        label.firstChild.textContent = text;
+    }
+}
+
+
 export const add_vector_arrow_to_svg = function (vector) {
     let vector_group = get_or_create_vector_group();
     let vector_arrow = create_arrow(vector.id, vector.x0, vector.y0, vector.x, vector.y, 'vector');
@@ -126,16 +172,10 @@ export const add_vector_arrow_to_svg = function (vector) {
     };
 
     vector_group.appendChild(vector_arrow);
-    let label = create_svg_element('text');
-    label.setAttribute('x', (calc_screen_x(vector.x) + 5).toString());
-    label.setAttribute('y', (calc_screen_y(vector.y) + 5).toString());
-    label.setAttribute('fill', 'yellow');
-    label.setAttribute('id', 'l' + vector.id);
-    let text = document.createTextNode(vector.label);
-    label.appendChild(text);
+
+    let label = create_label(vector);
 
     vector_group.appendChild(label);
-
 }
 
 /**
@@ -149,6 +189,7 @@ export const add_vector_arrow_to_svg = function (vector) {
 const draw_vectors = function () {
     const vector_group = get_or_create_vector_group();
 
+    let vectors = Object.values(vectors_by_id);
     for (let i = 0; i < vectors.length; i++) {
         add_vector_arrow_to_svg(vectors[i]);
     }
@@ -183,13 +224,13 @@ const redraw_grid = function () {
     svg.appendChild(create_axes());
 }
 
-export const update_vector_arrow = function (id, vector) {
-    let d = calculate_d(vector.x0, vector.y0, vector.x, vector.y);
-    let arrow = document.getElementById(id.toString());
+export const update_vector_arrow = function (existing_id, new_vector) {
+    let d = calculate_d(new_vector.x0, new_vector.y0, new_vector.x, new_vector.y);
+    let arrow = document.getElementById(existing_id.toString());
     if (arrow) {
         arrow.setAttribute('d', d);
-        arrow.id = vector.id;
-        update_label_position(id, vector.id, calc_screen_x(vector.x) + 5, calc_screen_y(vector.y) + 5);
+        arrow.id = new_vector.id;
+        update_label(existing_id, new_vector.id, calc_screen_x(new_vector.x) + 5, calc_screen_y(new_vector.y) + 5);
     }
 }
 
@@ -236,13 +277,6 @@ const create_defs = function () {
     return defs;
 }
 
-const update_label_position = function (id, new_id, x, y) {
-    let label = document.getElementById('l' + id);
-    label.setAttribute('x', x.toString());
-    label.setAttribute('y', y.toString());
-    label.id = 'l' + new_id;
-}
-
 /**
  * The moving operation. Called by onmousemove on the svg ('canvas')
  * @param event
@@ -251,11 +285,14 @@ const move_vector = function (event) {
     if (moving_vector) {
         let current_x = event.clientX;
         let current_y = event.clientY;
-        vectors[moving_vector.id].x = (current_x - origin_x) / grid_size;
-        vectors[moving_vector.id].y = (origin_y - current_y) / grid_size;
-        moving_vector.setAttribute('d', create_d(origin_x, origin_y, current_x, current_y));
-        update_label_position(moving_vector.id,moving_vector.id, current_x + 5, current_y + 5);
-        update_lazy_objects();
+        let vector = vectors_by_id[parseInt(moving_vector.id)];
+        if (vector) {
+            vector.x = (current_x - origin_x) / grid_size;
+            vector.y = (origin_y - current_y) / grid_size;
+            moving_vector.setAttribute('d', create_d(origin_x, origin_y, current_x, current_y));
+            update_label(moving_vector.id, moving_vector.id, current_x + 5, current_y + 5);
+            update_lazy_objects();
+        }
     }
 }
 /**
@@ -283,14 +320,6 @@ document.body.onresize = function recalculate_window_dimensions() {
     redraw();
 }
 
-const SVG_NS = 'http://www.w3.org/2000/svg'; // program needs these to create svg elements
-let grid_size = 100; // this is the nr of pixels for the basis vector (1,0) (0,1)
-let half_grid_size = grid_size >> 1; // used to position the grid lines
-
-let moving_vector; // user can move vector arrows. when moving, this refers to the arrow
-let width = window.innerWidth, height = window.innerHeight;
-let origin_x = Math.floor((width / grid_size) / 2) * grid_size + half_grid_size,
-    origin_y = Math.floor((height / grid_size) / 2) * grid_size + half_grid_size;
 const svg = create_svg();
 document.body.appendChild(svg);
 svg.appendChild(create_grid('grid', 'bg-grid'));

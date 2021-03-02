@@ -1,5 +1,4 @@
-import {token_types} from './scanner';
-import {scan} from './scanner';
+import {scan, token_types} from './scanner';
 
 export const parse = function (tokens) {
     let token_index = 0;
@@ -82,7 +81,7 @@ export const parse = function (tokens) {
     function call() {
         let expr = primary();
 
-        for (;;){
+        for (; ;) {
             if (match([token_types.LEFT_PAREN])) {
                 expr = finish_call(expr.name);
             } else {
@@ -112,20 +111,38 @@ export const parse = function (tokens) {
         if (match([token_types.NUMERIC, token_types.STRING])) {
             return {type: 'literal', value: previous_token().value, value_type: previous_token().type};
         } else if (match([token_types.LAZY])) {
-            let tokens = scan(previous_token().expression);
-            let expression = parse(tokens);
-            return {type: 'lazy', value: expression};
+            let expression = previous_token().expression;
+            let tokens = scan(expression);
+            let parsed_expression = parse(tokens);
+            return {
+                type: 'lazy',
+                expression: expression,
+                value: parsed_expression
+            };
         } else if (match([token_types.LEFT_PAREN])) {
             let expr = expression();
             if (expr && match([token_types.RIGHT_PAREN])) {
-                return {type: 'group', expression: expr};
+                return {
+                    type: 'group',
+                    expression: expr
+                };
             } else {
                 throw {message: 'expected expression or )'};
             }
         } else if (check(token_types.IDENTIFIER, token_index)) {
-            let identifier = {type: 'identifier', name: current_token().value};
+            let identifier = {
+                type: 'identifier',
+                name: current_token().value
+            };
             advance();
             return identifier;
+        } else if (check(token_types.AT, token_index)) {
+            let result = {
+                type: 'reference',
+                name: current_token().value
+            };
+            advance();
+            return result;
         }
     }
 

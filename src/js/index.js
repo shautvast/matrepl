@@ -1,57 +1,49 @@
 import {scan, token_types} from './scanner';
 import {parse} from './parser';
-import {add_vector_arrow_to_svg, remove_child, update_vector_arrow} from "./svg_functions";
+import {
+    add_vector_arrow,
+    add_vector_arrow_to_svg,
+    remove_vector_arrow,
+    update_label_text,
+    update_vector_arrow
+} from "./svg_functions";
 
-export let vectors = []; // collection of added vectors // maybe move to console.js
-const state = {};
+const state = {};       // binding -> value
+const bindings = {};    // binding -> {name:binding_name, evaluated: evaluated_lazy_value, previous: previous_value}
+const references = {};
 const command_input_element = document.getElementById('command_input');
 const command_history_element = document.getElementById('command_history');
 command_input_element.value = '';
 let command_history = [''];
 let command_history_index = 0;
-let vectors_index_sequence = 0;
+let index_sequence = 0;
 
-export const remove_vector = function (vector_or_index) {
-    let index;
-    if (vector_or_index.is_vector) {
-        for (let i = 0; i < vectors.length; i++) {
-            if (vectors[i].id === vector_or_index.id) {
-                index = i;
-                break;
-            }
-        }
-    } else {
-        index = vector_or_index;
-    }
+const hide = function (vector) {
+    remove_vector_arrow(vector);
+    return {description: `vector@${vector.id} is hidden`};
+}
 
-    if (!vectors[index]) {
-        throw {message: `vector@${index} not found`};
-    }
+const label = function (vector, text) {
+    vector.label_text = text;
+    update_label_text(vector.id, text);
+    return `label set to ${text} on vector@${vector.id}`;
+}
 
-    vectors.splice(index, 1);
-    remove_child(document.getElementById('vectors'), index.toString());
-    return {description: `vector@${index} removed`};
+const show = function (vector) {
+    add_vector_arrow_to_svg(vector);
+    return {description: `vector@${vector.id} is visible`};
 }
 
 export const update_lazy_objects = function () {
-    let lazy_objects = Object.values(state).filter(e => Object.prototype.hasOwnProperty.apply(e, ['lazy_expression']));
-    lazy_objects.forEach(object => {
-        let value = visit_expression(object.lazy_expression);
-        let existing_value = state[object.binding];
-        if (existing_value) {
-            update_vector_arrow(existing_value.id, value);
+    Object.values(bindings).forEach(binding => {
+        if (state[binding.name].lazy_expression) {
+            let value = visit(state[binding.name].lazy_expression);
+            let existing_value = bindings[binding.name].evaluated;
+            if (existing_value) {
+                update_vector_arrow(existing_value.id, value);
+                bindings[binding.name].evaluated = value;
+            }
         }
-        state[object.binding].x0 = value.x0;
-        state[object.binding].y0 = value.y0;
-        state[object.binding].x = value.x;
-        state[object.binding].y = value.y;
-        state[object.binding].id = value.id;
-        let description = state[object.binding].description;
-        if (!description) {
-            description = state[object.binding];
-        }
-
-        return {description: object.binding + ':' + description};
     });
 }
 
@@ -103,17 +95,27 @@ const handle_enter = function () {
             let statement = parse(tokens);
             let value;
             try {
-                value = visit_expression(statement);
+                value = visit(statement);
+                let binding;
+                if (value.is_binding) {                     // if it's declaration work with the initializer
+                    binding = value.name;                   // but we also need the name of the bound variable
+                    value = state[binding];
+                }
+                while (value.lazy_expression) {
+                    value = value.get();
+                }
+                if (binding) {
+                    bindings[binding].evaluated = value;   // store evaluation result
+                }
                 if (value.is_visual) {
-                    value.label = value.binding;
                     if (value.is_vector) {
-                        if (value.previous && value.previous.is_visual) {
+                        if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
                             update_vector_arrow(value.previous.id, value);
                         } else {
                             if (value.is_new) {
+                                value.label_text = binding ? binding : "";
                                 value.is_new = false;
-                                vectors.push(value);
-                                add_vector_arrow_to_svg(value);
+                                add_vector_arrow(value);
                             }
                         }
                     }
@@ -124,43 +126,36 @@ const handle_enter = function () {
             } catch (e) {
                 value = e.message;
             }
-            command_history_element.innerText += value + "\n";
+            command_history_element.innerText += value.toString() + "\n";
             command_history.push(command);
             command_history_element.scrollTo(0, command_history_element.scrollHeight);
         }
     }
 }
 
-const visit_expression = function (expr) {
+const visit = function (expr) {
     switch (expr.type) {
         case 'declaration': {
-            let value = visit_expression(expr.initializer);
-            if (!value.is_visual) {                     // if it's a primitive value,
-                value = {                               // wrap it into a object that returns the value
-                    _value: value,                      // references the original value
-                    toString: function () {
-                        return this._value;
-                    },
-                    get: function () {
-                        return this._value;
-                    },
-                    is_visual: false
+            let value = visit(expr.initializer);
+            let binding_name = expr.var_name.value;
+            if (bindings[binding_name]) {                            // do reassignment
+                bindings[binding_name].previous = state[binding_name];    // remember previous value, to remove it from the visualisation
+            } else {
+                bindings[binding_name] = {
+                    is_binding: true,
+                    name: binding_name,
+                    previous: null,
+                    evaluated: null
                 };
             }
-            value.binding = expr.var_name.value;        // store the variable name with it, to handle reassignment.
-            if (state[value.binding]) {                 // do reassignment
-                value.previous = state[value.binding];  // remember previous value, to remove it from the visualisation
-            }
-            state[value.binding] = value;               // assign new value to binding
+            state[binding_name] = value;                             // assign new value to binding
 
-            update_lazy_objects();                      // reevaluate any lazy expressions
-
-            return value;
+            return bindings[binding_name];
         }
         case 'group':                                   // expression within parentheses
-            return visit_expression(expr.expression);
+            return visit(expr.expression);
         case 'unary': {
-            let right_operand = visit_expression(expr.right);
+            let right_operand = visit(expr.right);
             if (expr.operator === token_types.MINUS) {
                 return -right_operand; //TODO create negate function (because now it only works for numbers)
             } else if (expr.operator === token_types.NOT) {
@@ -170,50 +165,63 @@ const visit_expression = function (expr) {
             }
         }
         case 'binary': {
-            let left = visit_expression(expr.left);
-            let right = visit_expression(expr.right);
             switch (expr.operator) {
                 case token_types.MINUS:
-                    return subtract(left, right);
+                    return subtract(visit(expr.left), visit(expr.right));
                 case token_types.PLUS:
-                    return addition(left, right);
+                    return addition(visit(expr.left), visit(expr.right));
                 case token_types.STAR:
-                    return multiplication(left, right);
+                    return multiplication(visit(expr.left), visit(expr.right));
                 case token_types.SLASH:
-                    return left / right;
+                    return visit(expr.left) / visit(expr.right);
                 case token_types.DOT:
-                    return method_call(left, expr.right);
+                    return method_call(visit(expr.left), expr.right); // right is not evaluated. It's the method name
+                // could also be evaluated to itself, BUT it's of type call which would invoke a function (see below)
             }
             throw {message: 'illegal binary operator'};
         }
         case 'identifier': {
             if (state[expr.name]) {
-                let object = state[expr.name];
-                let get = object.get();
-                return get;
+                let value = state[expr.name];
+                while (value.lazy_expression) {
+                    value = value.get();
+                }
+                return value;
             } else {
                 break;
             }
         }
-        case 'literal':
-            return expr.value;
+        case 'literal': {
+            let value = expr.value;
+            while (value.lazy_expression) {
+                value = value.get();
+            }
+            return value;
+        }
         case 'call':
             return function_call(expr.name, expr.arguments);
         case 'lazy': {
-            let r = visit_expression(expr.value);
-            r.lazy_expression = expr.value;
-            return r;
+            let expression = expr.expression;
+            let parsed_expression = expr.value;
+            return {
+                lazy_expression: parsed_expression,
+                toString: function () {
+                    return `"${expression}"`;
+                },
+                get: function () {
+                    return visit(parsed_expression);
+                }
+            };
+        }
+        case 'reference': {
+            return references[expr.name];
         }
     }
 }
 
 const function_call = function (function_name, argument_exprs) {
-    let arguments_list = [];
-    for (let i = 0; i < argument_exprs.length; i++) {
-        arguments_list.push(visit_expression(argument_exprs[i]));
-    }
     if (Object.prototype.hasOwnProperty.apply(functions, [function_name])) {
-        return functions[function_name](arguments_list);
+        return functions[function_name](resolve_arguments(argument_exprs));
     } else {
         let arg_list = '';
         for (let i = 0; i < argument_exprs.length; i++) {
@@ -226,23 +234,23 @@ const function_call = function (function_name, argument_exprs) {
     }
 }
 
-const method_call = function (object_wrapper, method_or_property) {
-    if (object_wrapper) {
+const method_call = function (object, method_or_property) {
+    if (object) {
         if (method_or_property.type === 'call') { // method
-            if (typeof object_wrapper[method_or_property.name] !== 'function') {
-                throw {message: `method ${method_or_property.name} not found on ${object_wrapper.type}`};
+            if (typeof object[method_or_property.name] !== 'function') {
+                throw {message: `method '${method_or_property.name}' not found on ${object.type}`};
             }
 
-            return object_wrapper[method_or_property.name].apply(object_wrapper, method_or_property.arguments);
+            return object[method_or_property.name].apply(object, resolve_arguments(method_or_property.arguments));
 
         } else { // property
-            if (!Object.prototype.hasOwnProperty.call(object_wrapper, [method_or_property.name])) {
-                throw {message: `property ${method_or_property.name} not found on ${object_wrapper.type}`};
+            if (!Object.prototype.hasOwnProperty.call(object, [method_or_property.name])) {
+                throw {message: `property '${method_or_property.name}' not found on ${object.type}`};
             }
-            return object_wrapper[method_or_property.name];
+            return object[method_or_property.name];
         }
     } else {
-        throw {message: `not found: ${object_wrapper}`};
+        throw {message: `not found: ${object}`};
     }
 }
 
@@ -255,12 +263,15 @@ const functions = {
             return create_vector({x0: args[0], y0: args[1], x: args[2], y: args[3]});
         }
     },
-    remove: (args) => {
-        if (Object.prototype.hasOwnProperty.call(args[0], ['binding'])) {
-            delete state[args[0].binding];
-        }
-        return remove_vector(args[0]);
+    hide: (args) => {
+        return hide(args[0]);
     },
+    label: (args) =>{
+        return label(args[0], args[1]);
+    },
+    show: (args) =>{
+        return show(args[0]);
+    }
 }
 
 const help = function () {
@@ -317,17 +328,31 @@ const subtract = function (left, right) {
 }
 
 export const create_vector = function (vector) { //rename to create_vector
-    vector.id = vectors_index_sequence++;
+    vector.id = index_sequence++;
     vector.is_visual = true;
-    vector.is_vector = true;
+    vector.is_vector = true; // for comparison
+    vector.type = 'vector'; // for showing type to user
     vector.is_new = true;
     vector.toString = function () {
         return `vector@${this.id}{x0:${vector.x0},y0:${vector.y0} x:${vector.x},y:${vector.y}}`;
     };
-    vector.get = function () {
-        return vector;
-    }
+    references["@" + vector.id] = vector;
+    vector.hide = function () {
+        return hide(this);
+    };
+    vector.label = function (text) {
+        return label(this, text);
+    };
+    vector.show = function () {
+        return show(this);
+    };
     return vector;
 }
 
-
+const resolve_arguments = function(argument_exprs) {
+    let arguments_list = [];
+    for (let i = 0; i < argument_exprs.length; i++) {
+        arguments_list.push(visit(argument_exprs[i]));
+    }
+    return arguments_list;
+}

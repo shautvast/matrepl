@@ -69,6 +69,11 @@ export const scan = function (command) {
                 return string();
             case '"':
                 return lazy_expression();
+            case '@': {
+                let reference = Object.assign({}, token_types.AT);
+                reference.value = parse_reference();
+                return reference;
+            }
         }
         if (is_digit(next_char)) {
             let token = Object.assign({}, token_types.NUMERIC);
@@ -116,6 +121,13 @@ export const scan = function (command) {
 
     function is_part_of_number(char) {
         return is_digit(char) || char === '.'; // no scientific notation for now
+    }
+
+    function parse_reference() {
+        while (current_char() === '@' || is_digit(current_char())) {
+            advance();
+        }
+        return command.substring(word_start_index, current_index);
     }
 
     function parse_number() {
@@ -192,5 +204,6 @@ export const token_types = {
     NUMERIC: {type: 'number', value: undefined},
     IDENTIFIER: {type: 'identifier', value: undefined},
     STRING: {type: 'string', value: undefined},
-    LAZY: {type: 'lazy', expression: undefined, parsed_expression:undefined}
+    LAZY: {type: 'lazy', expression: undefined, parsed_expression: undefined},
+    AT: {type: 'reference', value: undefined}
 };
