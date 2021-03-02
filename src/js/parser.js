@@ -95,12 +95,16 @@ export const parse = function (tokens) {
     function finish_call(callee) {
         let arguments_list = [];
         if (!check(token_types.RIGHT_PAREN, token_index)) {
+            let result;
             do {
-                arguments_list.push(expression());
-            } while (match([token_types.COMMA]));
-        }
-        if (!match([token_types.RIGHT_PAREN])) {
-            throw {message: "Expect ')' after arguments."};
+                result = expression();
+                if (result) {
+                    arguments_list.push(result);
+                } else {
+                    throw {message: "Expect ')' after arguments."};
+                }
+                match([token_types.COMMA]);
+            } while (!match([token_types.RIGHT_PAREN]));
         }
 
         return {type: 'call', name: callee, arguments: arguments_list};
@@ -154,7 +158,7 @@ export const parse = function (tokens) {
     function match(tokens_to_match) {
         for (let i = 0; i < tokens_to_match.length; i++) {
             if (are_same(tokens_to_match[i], current_token())) {
-                advance()
+                advance();
                 return true;
             }
         }
