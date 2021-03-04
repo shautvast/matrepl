@@ -9,17 +9,19 @@ The repl has the following syntax (It's work in progress, new capabilities will 
 * arithmetic expressions:
   * add, subtract, divide, multiply
 * variable declaration eg: a= ...
-* vector(1,2,3,4) adds a vector
+ ```vector(1,2,3,4)``` adds a vector, ```vector(1 2)``` as well. The start is now the origin.
+ commas are not mandatory. I'm planning to add a more mathematical notation for vectors: ```[1 2]```
   * > &gt; vector@0{x0:1, y0: 2, x:3, y:4}
-* remove(x) removes bindings (when it's an object (eg vector), removes it from the matrix)
-* remove(@x) removes an object using it's assigned index 
+* ```remove(x)``` removes bindings (when it's an object (eg vector), removes it from the matrix)
+* ```remove(@n)``` removes an object using it's assigned index (```n``` is a number) 
 * method calls:
-  * a = vector(12,1)
+   ```a = vector(12,1)```
   > &gt; vector@0{x0:1, y0: 2, x:12, y:1}
-  * a.type()
+* properties
+* ```a.type```
   > &gt; vector
 * property lookup
-  * a.x+1
+  ```a.x+1```
   > &gt; 13
 * drag vectors using the mouse pointer. You can change the vector arrows visually
 * lazy evaluation. The difference between ```c = a+b``` and ```c = "a+b"``` 
@@ -27,19 +29,17 @@ The repl has the following syntax (It's work in progress, new capabilities will 
   When you apply lazy evaluation and later update ```a```, the value for c will be reevaluated
   automatically. Combined with vector dragging, this way you can get an intuition for vector addition.
   Want to do the same for matrix multiplication and basis change. 
-
-**To run locally**
-* make sure you have node/npm
-* cmdline: npm run start
 * enter the following:
   ```
   a = vector(0.5, 0.5)
   b = vector(-1, 1)
   c = "a+b"
   ```
-* and press enter. Then using the mouse pointer move a or b. Or try:
-  ```
-  a=2*a
-  ```
-  this updates vector ```a``` to twice it's size. And, because ```c``` is defined lazily, it is updated as well!
-* or type help()
+* and press enter. Then using the mouse pointer move a or b. Or try: ```a=2*a```
+  This updates vector ```a``` to twice it's size. And, because ```c``` is defined lazily, it is updated as well!
+
+
+**To run locally**
+* make sure you have node/npm
+* cmdline: npm run start
+* and enter ```help()```
