@@ -7,10 +7,15 @@
   
 The repl has the following syntax (It's work in progress, new capabilities will be added)
 * arithmetic expressions:
-  * add, subtract, divide, multiply
-* variable declaration eg: ```a = 1```
+  * add(+), subtract(-), divide(/), multiply(*) on scalars, vectors and matrices. 
+* variable declaration eg: ```a = 1 + 2```
 * ```remove(x)``` removes bindings (when it's an object (eg vector), removes it from the matrix)
-* ```remove(@n)``` removes an object using it's assigned index (```n``` is a number) 
+* ```remove(@n)``` removes an object using it's assigned index (```n``` is a number)
+  * By the way, values can be bound to a name (assigned to a variable), but you can always also refer to them using their id, using : ```@n```
+  * so ```a = vector(1,1)```
+  > &gt; vector@0{x0:0, y0: 1, x:1, y:1}
+  * and then ```@0```
+  > &gt; vector@0{x0:0, y0: 1, x:1, y:1}
 * method calls:
    ```a = vector(12, 1)```
   > &gt; vector@0{x0:1, y0: 2, x:12, y:1}
@@ -18,7 +23,7 @@ The repl has the following syntax (It's work in progress, new capabilities will 
   commas are not mandatory. I'm planning to add a more mathematical notation for vectors: ```[1 2]```
   
 * properties
-* ```a.type```
+  * ```a.type```
   > &gt; vector
 * property lookup
   ```a.x+1```
