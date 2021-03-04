@@ -16,7 +16,7 @@ The repl has the following syntax (It's work in progress, new capabilities will 
   > &gt; vector@0{x0:1, y0: 2, x:12, y:1}
 * ```vector(1 2)``` works as well. The start is now the origin.
   commas are not mandatory. I'm planning to add a more mathematical notation for vectors: ```[1 2]```
-  * > &gt; vector@0{x0:1, y0: 2, x:3, y:4}
+  
 * properties
 * ```a.type```
   > &gt; vector
