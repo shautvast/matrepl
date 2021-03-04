@@ -287,8 +287,8 @@ const create_defs = function () {
  */
 const move_vector = function (event) {
     if (moving_vector) {
-        let current_x = event.clientX;
-        let current_y = event.clientY;
+        let current_x = event.offsetX;
+        let current_y = event.offsetY;
         let vector = vectors_by_id[parseInt(moving_vector.id)];
         if (vector) {
             vector.x = (current_x - origin_x) / grid_size;
