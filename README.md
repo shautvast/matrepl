@@ -37,5 +37,9 @@ The repl has the following syntax (It's work in progress, new capabilities will 
   b = vector(-1, 1)
   c = "a+b"
   ```
-* and press enter. Then using the mouse pointer move a or b. 
+* and press enter. Then using the mouse pointer move a or b. Or try:
+  ```
+  a=2*a
+  ```
+  this updates vector ```a``` to twice it's size. And, because ```c``` is defined lazily, it is updated as well!
 * or type help()
