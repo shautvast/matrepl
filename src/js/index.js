@@ -36,23 +36,50 @@ const show = function (vector) {
     return {description: `vector@${vector.id} is visible`};
 }
 
-export const update_lazy_objects = function () {
-    let b = Object.values(bindings);                // a lazy expression must be bound
-    for (let i = 0; i < b.length; i++) {            // unbound ones can exist, but are meaningless, because you cannot refer to them
-        let binding = b[i];
-        if (state[binding.name].lazy_expression) {                  // if lazy,
-            let value = visit(state[binding.name].lazy_expression); // reevaluate,
-            let existing_value = bindings[binding.name].evaluated;  // update view
-            if (existing_value && existing_value.id) {
-                // update view after reevaluation of lazy vectors
-                update_vector_arrow(existing_value.id, value);
-                bindings[binding.name].evaluated = value;
-            } else if (value.is_new && value.is_vector){
-                // hidden lazy vector reappears
-                value.label_text=binding.name;
-                add_vector_arrow_to_svg(value);
+export const update_visible_objects = function () {
+    Object.entries(bindings).forEach(entry => {                         // a lazy expression must be bound
+        const [name, binding] = entry;
+        let value = state[binding.name];
+        if (value.lazy_expression) {
+            let new_value = visit(value.lazy_expression);               // reevaluate,
+            let existing_value = binding.evaluated;                     // update view
+            if (new_value.is_vector || existing_value.is_vector) {
+                bindings[name].evaluated = new_value;
+                new_value.label_text = existing_value.label_text;       // SAD
+                update_vector(existing_value, new_value, name);
             }
         }
+    });
+
+
+    Object.entries(references).forEach(entry => {
+        const [id, value] = entry;
+        if (value.lazy_expression) {
+            let new_value = visit(value.lazy_expression);
+            let existing_value = value;
+            if (new_value.is_vector || existing_value.is_vector) {
+                new_value.lazy_expression = value.lazy_expression;
+                references[id] = new_value;
+                if (existing_value && existing_value.id) {
+                    // update view after reevaluation of lazy vectors
+                    update_vector_arrow(existing_value.id, new_value);
+                } else if (new_value.is_new && new_value.is_vector) {
+                    // hidden lazy vector reappears
+                    add_vector_arrow_to_svg(new_value);
+                }
+            }
+        }
+    });
+}
+
+function update_vector(existing_value, new_value, binding_name) {
+    if (existing_value && existing_value.id) {
+        // update view after reevaluation of lazy vectors
+        update_vector_arrow(existing_value.id, new_value);
+    } else if (new_value.is_new && new_value.is_vector) {
+        // hidden lazy vector reappears
+        new_value.label_text = binding_name;
+        add_vector_arrow_to_svg(new_value);
     }
 }
 
@@ -113,9 +140,11 @@ const handle_enter = function () {
                 let statement = parse(tokens);
                 value = visit(statement);
                 let binding;
-                if (value.is_binding) {                     // if it's declaration work with the initializer
-                    binding = value.name;                   // but we also need the name of the bound variable
-                    value = state[binding];
+                if (value.is_binding) {                         // if it's declaration work with the initializer
+                    binding = value.name;                       // but we also need the name of the bound variable
+                    value = state[binding];                     // lookup the value for the binding
+                } else if (value.id) {
+                    references['@' + value.id] = value;
                 }
                 while (value.lazy_expression) {
                     value = value.get();
@@ -139,7 +168,7 @@ const handle_enter = function () {
                         label(bindings[binding].previous, '@' + bindings[binding].previous.id);
                     }
                 }
-                update_lazy_objects();
+                update_visible_objects();
                 if (value.description) {
                     value = value.description;
                 }
@@ -170,8 +199,9 @@ const visit = function (expr) {
             }
             state[binding_name] = value;                                // assign new value to binding
 
-            return bindings[binding_name];
-        }
+            return bindings[binding_name];                              // don't return the value itself, but the binding_object
+        }                                                               // with which you can lookup the value
+
         case 'group':                                                   // expression within parentheses
             return visit(expr.expression);
         case 'unary': {
@@ -376,7 +406,6 @@ export const create_vector = function (vector) { //rename to create_vector
     vector.toString = function () {
         return `vector@${this.id}{x0:${vector.x0},y0:${vector.y0} x:${vector.x},y:${vector.y}}`;
     };
-    references["@" + vector.id] = vector;
     vector.hide = function () {
         return hide(this);
     };
@@ -392,7 +421,11 @@ export const create_vector = function (vector) { //rename to create_vector
 const resolve_arguments = function (argument_exprs) {
     let arguments_list = [];
     for (let i = 0; i < argument_exprs.length; i++) {
-        arguments_list.push(visit(argument_exprs[i]));
+        let value = visit(argument_exprs[i]);
+        if (value.lazy_expression) {
+            value = value.get();    // not convinced this must be here, but where else?
+        }
+        arguments_list.push(value);
     }
     return arguments_list;
 }

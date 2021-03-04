@@ -1,4 +1,4 @@
-import {update_lazy_objects} from "./index";
+import {update_visible_objects} from "./index";
 
 let vectors_by_id = {};
 const SVG_NS = 'http://www.w3.org/2000/svg'; // program needs these to create svg elements
@@ -170,11 +170,9 @@ export const add_vector_arrow_to_svg = function (vector) {
     vector_arrow.onmousedown = function start_moving_vector(event) {
         moving_vector = event.target;
     };
-
     vector_group.appendChild(vector_arrow);
 
     let label = create_label(vector);
-
     vector_group.appendChild(label);
 }
 
@@ -297,7 +295,7 @@ const move_vector = function (event) {
             vector.y = (origin_y - current_y) / grid_size;
             moving_vector.setAttribute('d', create_d(origin_x, origin_y, current_x, current_y));
             update_label(moving_vector.id, moving_vector.id, current_x + 5, current_y + 5);
-            update_lazy_objects();
+            update_visible_objects();
         }
     }
 }
