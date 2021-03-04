@@ -18,15 +18,15 @@ The repl has the following syntax (It's work in progress, new capabilities will 
   > &gt; vector@0{x0:0, y0: 1, x:1, y:1}
 * method calls:
    ```a = vector(12, 1)```
-  > &gt; vector@0{x0:1, y0: 2, x:12, y:1}
+  > &gt; vector@0{x0:0, y0: 2, x:12, y:1}
 * ```vector(1 2)``` works as well. The start is now the origin.
   commas are not mandatory. I'm planning to add a more mathematical notation for vectors: ```[1 2]```
   
 * properties
+  * ```a = vector(12, 1)```
   * ```a.type```
   > &gt; vector
-* property lookup
-  ```a.x+1```
+  * ```a.x+1```
   > &gt; 13
 * drag vectors using the mouse pointer. You can change the vector arrows visually
 * lazy evaluation. The difference between ```c = a+b``` and ```c = "a+b"``` 
