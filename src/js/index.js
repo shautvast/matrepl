@@ -274,7 +274,7 @@ const function_call = function (function_name, argument_exprs) {
     if (Object.prototype.hasOwnProperty.apply(functions, [function_name])) {
         return functions[function_name](resolve_arguments(argument_exprs));
     } else {
-        return 'unimplemented: ' + function_name + '(' + argument_exprs.map(e=>e.value_type).join(',') + ')';
+        return `unimplemented:  ${function_name}(${argument_exprs.map(e=>e.value_type).join(',') })`;
     }
 }
 
