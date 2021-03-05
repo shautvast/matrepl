@@ -167,8 +167,8 @@ const handle_enter = function () {
                 if (value.description) {
                     value = value.description;
                 }
-            } catch (e) {
-                value = e.message;
+            } catch (exception) {
+                value = exception ? exception.message : undefined;
             }
             command_history_element.innerText += value.toString() + "\n";
             command_history.push(command);
