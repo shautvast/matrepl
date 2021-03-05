@@ -47,7 +47,7 @@ export const parse = function (tokens) {
     function addition() {
         let expr = multiplication();
 
-        while (match([token_types.MINUS, token_types.PLUS])) {
+        while (match([token_types.OR, token_types.MINUS, token_types.PLUS])) {
             let operator = previous_token();
             let right = multiplication();
             expr = {type: 'binary', left: expr, operator: operator, right: right};
@@ -59,7 +59,7 @@ export const parse = function (tokens) {
     function multiplication() {
         let expr = unary();
 
-        while (match([token_types.SLASH, token_types.STAR, token_types.DOT])) {
+        while (match([token_types.AND, token_types.SLASH, token_types.STAR, token_types.DOT])) {
             let operator = previous_token();
             let right = unary();
             expr = {type: 'binary', left: expr, operator: operator, right: right};

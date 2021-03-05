@@ -65,6 +65,10 @@ export const scan = function (command) {
                 } else {
                     return token_types.EQUALS;
                 }
+            case '&':
+                return token_types.AND;
+            case '|':
+                return token_types.OR;
             case '\'':
                 return string();
             case '"':
@@ -205,5 +209,7 @@ export const token_types = {
     IDENTIFIER: {type: 'identifier', value: undefined},
     STRING: {type: 'string', value: undefined},
     LAZY: {type: 'lazy', expression: undefined, parsed_expression: undefined},
-    AT: {type: 'reference', value: undefined}
+    AT: {type: 'reference', value: undefined},
+    AND: {type: 'logical_and'},
+    OR: {type: 'logical_or'}
 };
