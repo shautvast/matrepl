@@ -1,3 +1,4 @@
+import '../css/app.css';
 import {scan, token_types} from './scanner';
 import {parse} from './parser';
 import {
