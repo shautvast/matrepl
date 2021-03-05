@@ -102,12 +102,8 @@ const create_vector = function (x0, y0, x, y) { //rename to create_vector
 export const multiplication = function (left, right) {
 
     const multiply = function (vector, scalar) {
-        return create_vector({
-            x0: vector.x0 * scalar,
-            y0: vector.y0 * scalar,
-            x: vector.x * scalar,
-            y: vector.y * scalar
-        });
+        return create_vector(vector.x0 * scalar, vector.y0 * scalar, vector.x * scalar, vector.y * scalar
+        );
     };
 
     if (left.is_vector && !right.is_vector) {
@@ -121,12 +117,7 @@ export const multiplication = function (left, right) {
 
 export const division = function (left, right) {
     const divide = function (vector, scalar) {
-        return create_vector({
-            x0: vector.x0 / scalar,
-            y0: vector.y0 / scalar,
-            x: vector.x / scalar,
-            y: vector.y / scalar
-        });
+        return create_vector(vector.x0 / scalar, vector.y0 / scalar, vector.x / scalar, vector.y / scalar);
     };
 
     if (left.is_vector && !right.is_vector) {
@@ -140,12 +131,7 @@ export const division = function (left, right) {
 
 export const addition = function (left, right) {
     if (left && left.is_vector && right && right.is_vector) {
-        return create_vector({
-            x0: left.x0 + right.x0,
-            y0: left.x0 + right.x0,
-            x: left.x + right.x,
-            y: left.y + right.y
-        });
+        return create_vector(left.x0 + right.x0, left.x0 + right.x0, left.x + right.x, left.y + right.y);
     }
     return left + right;
 }
