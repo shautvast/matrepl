@@ -168,7 +168,7 @@ const handle_enter = function () {
                     value = value.description;
                 }
             } catch (exception) {
-                value = exception ? exception.message : undefined;
+                value = exception.message;
             }
             command_history_element.innerText += value.toString() + "\n";
             command_history.push(command);
