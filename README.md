@@ -2,6 +2,7 @@
 * is a Matrix
 * and a repl: Read–Eval–Print Loop, where Print is doing operations on vectors and matrices in a graphic environment
 * written in vanilla javascript (ES6)
+* see live at https://matrepl.net
 
 ![add 2 vectors](screenshot.png? "add 2 vectors")
   
