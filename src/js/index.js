@@ -144,7 +144,7 @@ const handle_enter = function () {
                 if (value.is_binding) {                         // if it's declaration work with the initializer
                     binding = value.name;                       // but we also need the name of the bound variable
                     value = state[binding];                     // lookup the value for the binding
-                } else if (value.id) {
+                } else if (Object.prototype.hasOwnProperty.call(value, ['id'])) {
                     references['@' + value.id] = value;
                 }
                 while (value.lazy_expression) {
