@@ -274,7 +274,7 @@ const function_call = function (function_name, argument_exprs) {
     if (Object.prototype.hasOwnProperty.apply(functions, [function_name])) {
         return functions[function_name](resolve_arguments(argument_exprs));
     } else {
-        return `unimplemented:  ${function_name}(${argument_exprs.map(e=>e.value_type).join(',') })`;
+        return `unimplemented:  ${function_name}(${argument_exprs.map(e => e.value_type).join(',')})`;
     }
 }
 
@@ -413,13 +413,11 @@ export const create_vector = function (vector) { //rename to create_vector
 }
 
 const resolve_arguments = function (argument_exprs) {
-    let arguments_list = [];
-    for (let i = 0; i < argument_exprs.length; i++) {
-        let value = visit(argument_exprs[i]);
-        if (value.lazy_expression) {
-            value = value.get();    // not convinced this must be here, but where else?
+    return argument_exprs.map(expr => {
+        let value = visit(expr);
+        while (value.lazy_expression) {
+            value = value.get();
         }
-        arguments_list.push(value);
-    }
-    return arguments_list;
+        return value;
+    });
 }
