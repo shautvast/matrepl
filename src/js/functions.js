@@ -20,9 +20,6 @@ export const functions = {
     show: (args) => {
         return show(args[0]);
     },
-    pi: function () {
-        return Math.PI;
-    },
     sin: function (a) {
         return Math.sin(a);
     },
@@ -100,7 +97,6 @@ const create_vector = function (x0, y0, x, y) { //rename to create_vector
 }
 
 export const multiplication = function (left, right) {
-
     const multiply = function (vector, scalar) {
         return create_vector(vector.x0 * scalar, vector.y0 * scalar, vector.x * scalar, vector.y * scalar
         );

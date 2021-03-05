@@ -25,7 +25,9 @@ let command_history_index = 0;
 
 const keywords = {
     'true': true,
-    'false': false
+    'false': false,
+    'pi': Math.PI,
+    'PI': Math.PI
 }
 
 export const update_visible_objects = function () {
@@ -238,7 +240,7 @@ const visit = function (expr) {
                     }
                     return value;
                 } else {
-                    break;
+                    return undefined;
                 }
             }
         }
@@ -274,7 +276,7 @@ const function_call = function (function_name, argument_exprs) {
     if (Object.prototype.hasOwnProperty.apply(functions, [function_name])) {
         return functions[function_name](resolve_arguments(argument_exprs));
     } else {
-        return `unimplemented:  ${function_name}(${argument_exprs.map(e => e.value_type).join(',')})`;
+        return `unknown function:  ${function_name}(${argument_exprs.map(e => e.value_type).join(',')})`;
     }
 }
 
