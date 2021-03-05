@@ -134,38 +134,42 @@ const handle_enter = function () {
                 let tokens = scan(command);
                 let statement = parse(tokens);
                 value = visit(statement);
-                let binding;
-                if (value.is_binding) {                         // if it's declaration work with the initializer
-                    binding = value.name;                       // but we also need the name of the bound variable
-                    value = state[binding];                     // lookup the value for the binding
-                } else if (Object.prototype.hasOwnProperty.call(value, ['id'])) {
-                    references['@' + value.id] = value;
-                }
-                while (value.lazy_expression) {
-                    value = value.get();
-                }
-                if (binding) {
-                    bindings[binding].evaluated = value;   // store evaluation result
-                }
+                if (value !== undefined) {
+                    let binding;
+                    if (value.is_binding) {                         // if it's declaration work with the initializer
+                        binding = value.name;                       // but we also need the name of the bound variable
+                        value = state[binding];                     // lookup the value for the binding
+                    } else if (Object.prototype.hasOwnProperty.call(value, ['id'])) {
+                        references['@' + value.id] = value;
+                    }
+                    while (value.lazy_expression) {
+                        value = value.get();
+                    }
+                    if (binding) {
+                        bindings[binding].evaluated = value;   // store evaluation result
+                    }
 
-                if (value.is_visual) {
-                    if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
-                        update_vector_arrow(bindings[binding].previous.id, value);
+                    if (value.is_visual) {
+                        if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
+                            update_vector_arrow(bindings[binding].previous.id, value);
+                        } else {
+                            if (value.is_new) {
+                                value.label_text = binding ? binding : "";
+                                value.is_new = false;
+                                add_vector_arrow(value);
+                            }
+                        }
                     } else {
-                        if (value.is_new) {
-                            value.label_text = binding ? binding : "";
-                            value.is_new = false;
-                            add_vector_arrow(value);
+                        if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
+                            label(bindings[binding].previous, '@' + bindings[binding].previous.id);
                         }
                     }
-                } else {
-                    if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
-                        label(bindings[binding].previous, '@' + bindings[binding].previous.id);
+                    update_visible_objects();
+                    if (value.description) {
+                        value = value.description;
                     }
-                }
-                update_visible_objects();
-                if (value.description) {
-                    value = value.description;
+                } else {
+                    value = 'value is undefined';
                 }
             } catch (exception) {
                 value = exception.message;
