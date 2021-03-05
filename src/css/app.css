@@ -1,9 +1,14 @@
 body {
-    font: 13px Arial, sans-serif;
+    font: 11px Arial, sans-serif;
     background: black;
     overflow: hidden;
-}
 
+}
+.right{
+    color: gray;
+    position: absolute;
+    right: 0;
+}
 .background {
     position: absolute;
     left: 0;
@@ -32,6 +37,7 @@ svg {
 }
 
 #console {
+    font: 13px Arial, sans-serif;
     padding: 5px;
     color: greenyellow;
     background: black;
