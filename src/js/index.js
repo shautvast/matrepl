@@ -274,14 +274,7 @@ const function_call = function (function_name, argument_exprs) {
     if (Object.prototype.hasOwnProperty.apply(functions, [function_name])) {
         return functions[function_name](resolve_arguments(argument_exprs));
     } else {
-        let arg_list = '';
-        for (let i = 0; i < argument_exprs.length; i++) {
-            if (i > 0) {
-                arg_list += ',';
-            }
-            arg_list += argument_exprs[i].value_type;
-        }
-        return 'unimplemented: ' + function_name + '(' + arg_list + ')';
+        return 'unimplemented: ' + function_name + '(' + argument_exprs.map(e=>e.value_type).join(',') + ')';
     }
 }
 
