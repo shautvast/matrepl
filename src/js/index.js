@@ -27,7 +27,8 @@ const keywords = {
     'true': true,
     'false': false,
     'pi': Math.PI,
-    'PI': Math.PI
+    'PI': Math.PI,
+    'e': Math.E
 }
 
 export const update_visible_objects = function () {
