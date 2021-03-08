@@ -65,7 +65,7 @@ const help = function () {
     }
 }
 
-const create_vector = function (x0, y0, x, y) { //rename to create_vector
+export const create_vector = function (x0, y0, x, y) { //rename to create_vector
     const vector = {
         id: index_sequence++,
         x0: x0,

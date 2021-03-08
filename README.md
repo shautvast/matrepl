@@ -21,7 +21,11 @@ The repl has the following syntax (It's work in progress, new capabilities will 
    ```a = vector(12, 1)```
   > &gt; vector@0{x0:0, y0: 2, x:12, y:1}
 * ```vector(1 2)``` works as well. The start is now the origin.
-  commas are not mandatory. I'm planning to add a more mathematical notation for vectors: ```[1 2]```
+  commas are not mandatory. 
+* This means spaces are meaningful. 
+  ```vector(-1 -1)``` != ```vector(-1-1)``` and the latter would mean ```vector(-2)``` which is not legal.
+* arrays: \[i<sub>0</sub> i<sub>1</sub> i<sub>2</sub> ... i<sub>n</sub>] or \[i<sub>0</sub>, i<sub>1</sub>, i<sub>2</sub>, ... i<sub>n</sub>] creates an array. 
+  * \[i<sub>0</sub> i<sub>1</sub>] is special: it is a shorthand for creating a vector. I'll have to think of another way to create an array of length 2...
   
 * properties
   * ```a = vector(12, 1)```

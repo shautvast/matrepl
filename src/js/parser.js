@@ -103,13 +103,12 @@ export const parse = function (tokens) {
                 } else {
                     throw {message: "Expect ')' after arguments."};
                 }
-                match([token_types.COMMA]);
+                match([token_types.COMMA, token_types.SPACE]);
             } while (!match([token_types.RIGHT_PAREN]));
         }
 
         return {type: 'call', name: callee, arguments: arguments_list};
     }
-
 
     function primary() {
         if (match([token_types.NUMERIC, token_types.STRING])) {
@@ -147,6 +146,23 @@ export const parse = function (tokens) {
             };
             advance();
             return result;
+        } else if (match([token_types.LEFT_BRACKET])) {
+            let array = [];
+            if (!check(token_types.RIGHT_BRACKET, token_index)) {
+                let result;
+                do {
+                    result = expression();
+                    if (result) {
+                        array.push(result);
+                    } else {
+                        throw {message: "Expect ']' after array elements."};
+                    }
+                    match([token_types.COMMA, token_types.SPACE]);
+                } while (!match([token_types.RIGHT_BRACKET]));
+            }
+
+            return {type: 'array', elements: array};
+
         }
     }
 

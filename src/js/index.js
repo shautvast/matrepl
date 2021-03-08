@@ -4,6 +4,7 @@ import {parse} from './parser';
 import {add_vector_arrow, add_vector_arrow_to_svg, update_vector_arrow} from "./svg_functions";
 import {
     addition,
+    create_vector,
     division,
     functions,
     label,
@@ -273,6 +274,15 @@ const visit = function (expr) {
         }
         case 'reference': {
             return references[expr.name];
+        }
+        case 'array': { //unsure this is what I want
+            let array = expr.elements.map(x => x.value);
+            if (array.length === 2) {
+                return create_vector(0, 0, array[0], array[1]);
+            } else {
+                return array;
+            }
+
         }
     }
 }
