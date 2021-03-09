@@ -1,6 +1,7 @@
 describe('draw a vector', () => {
     it('adds the svg vector', () => {
         cy.visit('http://localhost:8080');
+        cy.get('#command_input').type("{enter}");
 
         cy.get('#command_input').type("a = vector(0,0,0.5,0.5){enter}");
         cy.get('#0').invoke('attr','d').should('eq','M550 350 L600 300');
@@ -18,8 +19,9 @@ describe('draw a vector', () => {
 describe('draw a lazy vector', () => {
     it('adds the svg vector', () => {
         cy.visit('http://localhost:8080');
+        cy.get('#command_input').type("{enter}");
 
-        cy.get('#command_input').type("a = vector(0,0,0.5,0.5){enter}");
+        cy.get('#command_input').type("a = [0.5,0.5]{enter}");
         cy.get('#0').invoke('attr','d').should('eq','M550 350 L600 300');
         cy.get('#0').invoke('attr','class').should('eq','vector');
         cy.get('#0').invoke('attr','marker-end').should('eq','url(#arrow)');

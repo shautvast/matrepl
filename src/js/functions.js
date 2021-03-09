@@ -70,10 +70,10 @@ const help = function () {
                a = [0.5, 0.5]
                b = [-1,1]
                c = "a+b"
-               a=a*2    
+               a = a*2    
              => when a is updated, c is too. 
-             Now try dragging a using the mouse pointer and see what happens.        
-               `
+             Now try dragging a vector using the mouse pointer and see what happens.
+             (NB dragging c won't work, because it is lazy)`
 
     }
 }
