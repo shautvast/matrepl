@@ -31,8 +31,6 @@ export const scan = function (command) {
                 return token_types.RIGHT_BRACKET;
             case ',':
                 return token_types.COMMA;
-            case ' ':
-                return token_types.SPACE;
             case '.':
                 return token_types.DOT;
             case '-':
@@ -194,7 +192,6 @@ export const token_types = {
     LEFT_BRACKET: {type: 'left_bracket'},
     RIGHT_BRACKET: {type: 'right_bracket'},
     COMMA: {type: 'comma'},
-    SPACE: {type: 'space'},
     DOT: {type: 'dot'},
     MINUS: {type: 'minus'},
     PLUS: {type: 'plus'},

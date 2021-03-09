@@ -103,7 +103,7 @@ export const parse = function (tokens) {
                 } else {
                     throw {message: "Expect ')' after arguments."};
                 }
-                match([token_types.COMMA, token_types.SPACE]);
+                match([token_types.COMMA]);
             } while (!match([token_types.RIGHT_PAREN]));
         }
 
@@ -157,7 +157,7 @@ export const parse = function (tokens) {
                     } else {
                         throw {message: "Expect ']' after array elements."};
                     }
-                    match([token_types.COMMA, token_types.SPACE]);
+                    match([token_types.COMMA]);
                 } while (!match([token_types.RIGHT_BRACKET]));
             }
 
