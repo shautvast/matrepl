@@ -45,7 +45,7 @@ svg {
     right: 10px;
     bottom: 0;
     width: 40%;
-    height: 10em;
+    height: 20em;
     border: 2px solid darkgray;
     border-radius: 10px;
     z-index: 10;
@@ -93,7 +93,7 @@ svg {
     color: greenyellow;
     position: absolute;
     bottom: 1.5em;
-    max-height: 9em;
+    max-height: 20em;
     width: 100%;
     overflow-y: visible;
     overflow-x: hidden;

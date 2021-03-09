@@ -59,9 +59,22 @@ export const show = function (vector) {
 const help = function () {
     return {
         description:
-            `- vector(<x0>, <y0>, <x>, <y>): draws a vector from x0,y0 to x,y
-                     - remove(<identifier>|<ref>): removes an object, 
-                        a ref is @n where n is the reference number asigned to the object`
+            `- vector(x0, y0, x,y): draws a vector from x0,y0 to x,y
+               x0 and y0 default to 0 (the origin)
+             - [x,y] also draws a vector, but generally, [i,j,k...] defines an array
+             - remove(<identifier>|<ref>): removes an object, 
+               a ref is @n where n is the reference number asigned to the object
+             - "..." is a lazy expression
+             
+             Try the following: 
+               a = [0.5, 0.5]
+               b = [-1,1]
+               c = "a+b"
+               a=a*2    
+             => when a is updated, c is too. 
+             Now try dragging a using the mouse pointer and see what happens.        
+               `
+
     }
 }
 

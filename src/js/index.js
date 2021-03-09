@@ -20,7 +20,7 @@ const bindings = {};    // binding -> {name:binding_name, evaluated: evaluated_l
 const references = {};  // for retrieval of objects by reference (@n, where n is a number)
 const command_input_element = document.getElementById('command_input');
 const command_history_element = document.getElementById('command_history');
-command_input_element.value = '';
+command_input_element.value = 'help()';
 let command_history = [''];
 let command_history_index = 0;
 
@@ -276,7 +276,7 @@ const visit = function (expr) {
             return references[expr.name];
         }
         case 'array': { //unsure this is what I want
-            let array = expr.elements.map(x => x.value);
+            let array = expr.elements.map(x => visit(x));
             if (array.length === 2) {
                 return create_vector(0, 0, array[0], array[1]);
             } else {
