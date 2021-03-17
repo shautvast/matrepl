@@ -6,7 +6,7 @@ describe('draw a vector', () => {
         cy.get('#command_input').type("a = vector(0,0,0.5,0.5){enter}");
         cy.get('#0').invoke('attr','d').should('eq','M550 350 L600 300');
         cy.get('#0').invoke('attr','class').should('eq','vector');
-        cy.get('#0').invoke('attr','marker-end').should('eq','url(#arrow)');
+        cy.get('#0').invoke('attr','marker-end').should('eq','url(#vector_arrow)');
 
         cy.get('#command_input').type("b = vector(0,0,-1,1){enter}");
         cy.get('#1').invoke('attr','d').should('eq','M550 350 L450 250');
@@ -24,7 +24,7 @@ describe('draw a lazy vector', () => {
         cy.get('#command_input').type("a = [0.5,0.5]{enter}");
         cy.get('#0').invoke('attr','d').should('eq','M550 350 L600 300');
         cy.get('#0').invoke('attr','class').should('eq','vector');
-        cy.get('#0').invoke('attr','marker-end').should('eq','url(#arrow)');
+        cy.get('#0').invoke('attr','marker-end').should('eq','url(#vector_arrow)');
 
         cy.get('#command_input').type("b = vector(0,0,-1,1){enter}");
         cy.get('#1').invoke('attr','d').should('eq','M550 350 L450 250');
