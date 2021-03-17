@@ -11,6 +11,9 @@ export const functions = {
             return create_vector(args[0], args[1], args[2], args[3]);
         }
     },
+    id: () => {
+        return create_2d_id_matrix()
+    },
     hide: (args) => {
         return hide(args[0]);
     },
@@ -103,7 +106,8 @@ export const create_vector = function (x0, y0, x, y) { //rename to create_vector
             return show(this);
         },
         equals: function (other) {
-            return (this.id === other.id || (this.x0 === other.x0 && this.y0 === other.y0 && this.x === other.x && this.y === other.y));
+            return (this.id === other.id ||
+                (this.type === other.type && this.x0 === other.x0 && this.y0 === other.y0 && this.x === other.x && this.y === other.y));
         }
     };
     return vector;
@@ -171,4 +175,36 @@ export const logical_and = function (left, right) {
 
 export const logical_or = function (left, right) {
     return left || right;
+}
+
+const create_2d_id_matrix = function () {
+    return {
+        data: [[1, 0], [0, 1]],
+        id: index_sequence++,
+        is_visual: true,
+        is_vector: false,         // for type comparison
+        is_matrix: true,
+        type: 'matrix',          // for showing type to user
+        is_new: true,            // to determine view action
+        visible: true,
+        toString: function () {
+            return `matrix@${this.id}`;
+        },
+        hide: function () {
+            return hide(this);
+        },
+        label: function (text) {
+            return label(this, text);
+        },
+        show: function () {
+            return show(this);
+        },
+        equals: function (other) {
+            return (this.id === other.id || (this.type === other.type && this.data === other.data)); // TODO
+        },
+        row: function (index) {
+            return this.data[index];
+        }
+    }
+
 }

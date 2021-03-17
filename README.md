@@ -24,7 +24,8 @@ The repl has the following syntax (It's work in progress, new capabilities will 
   ```vector(-1 -1)``` != ```vector(-1-1)``` and the latter would mean ```vector(-2)``` which is not legal.
 * arrays: \[i<sub>0</sub>, i<sub>1</sub>, i<sub>2</sub>, ... i<sub>n</sub>] creates an array. 
   * \[i<sub>0</sub>, i<sub>1</sub>] is special: it is a shorthand for creating a 2-dimensional vector. I'll have to think of another way to create an array of length 2...
-  
+ 
+* ```id()`` adds a 2d identity matrix, which is also the two basis vectors.  
 * properties
   * ```a = [1,2]```
   * ```a.type```

@@ -1,7 +1,7 @@
 import '../css/app.css';
 import {scan, token_types} from './scanner';
 import {parse} from './parser';
-import {add_vector_arrow, add_vector_arrow_to_svg, update_vector_arrow} from "./svg_functions";
+import {add_matrix_view, add_vector_arrow, add_vector_arrow_to_svg, update_vector_arrow,} from "./svg_functions";
 import {
     addition,
     create_vector,
@@ -97,6 +97,9 @@ command_input_element.onkeypress = function handle_key_input(event) {
 
 command_input_element.onkeyup = function handle_key_input(event) {
     adjust_input_element_height();
+    if (event.key === 'c' && event.ctrlKey) {
+        command_input_element.value = '';
+    }
     if (event.key === 'ArrowUp' && !event.shiftKey) {
         if (command_history_index > -1) {
             command_input_element.value = command_history[command_history_index];
@@ -151,14 +154,10 @@ const handle_enter = function () {
                     }
 
                     if (value.is_visual) {
-                        if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
-                            update_vector_arrow(bindings[binding].previous.id, value);
-                        } else {
-                            if (value.is_new) {
-                                value.label_text = binding ? binding : "";
-                                value.is_new = false;
-                                add_vector_arrow(value);
-                            }
+                        if (value.is_vector) {
+                            create_or_update_vector(binding, value);
+                        } else if (value.is_matrix) {
+                            create_or_update_matrix(binding, value);
                         }
                     } else {
                         if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
@@ -323,4 +322,28 @@ const resolve_arguments = function (argument_exprs) {
         }
         return value;
     });
+}
+
+function create_or_update_vector(binding, value) {
+    if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
+        update_vector_arrow(bindings[binding].previous.id, value);
+    } else {
+        if (value.is_new) {
+            value.label_text = binding ? binding : "";
+            value.is_new = false;
+            add_vector_arrow(value);
+        }
+    }
+}
+
+function create_or_update_matrix(binding, value) {
+    if (binding && bindings[binding].previous && bindings[binding].previous.is_visual) {
+        // update_matrix_view(bindings[binding].previous.id, value);
+    } else {
+        if (value.is_new) {
+            value.label_text = binding ? binding : "";
+            value.is_new = false;
+            add_matrix_view(value);
+        }
+    }
 }
